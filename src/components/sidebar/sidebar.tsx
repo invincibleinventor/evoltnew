@@ -2,59 +2,85 @@ import { component$ } from "@builder.io/qwik";
 export const Sidebar = component$(() => {
     return(
         <div
-        class="h-auto hidden bg-black bg-opacity-20 border-l border-l-neutral-900 md:flex flex-col px-4 py-4 w-[300px] lg:w-[335px]"
+        class="sidebarwrapper"
       >
-       
-       <span class="pl-2 mt-1 text-md  font-medium text-neutral-400 font-sans"
-          >Quick Links
+          <div class=" sidebarprofile">
+
+<div class="py-[10px]  pt-0 flex flex-col items-center content-center ">
+  <div class="flex flex-row w-full items-center content-center">
+<span class="profiletext"
+  >Profile
+  </span>
+
+  <div class="logtext">Logout</div>
+  </div>
+  <div class="flex flex-col  mt-6">
+    <img class="w-20 h-20 rounded-full mx-auto" src="https://picsum.photos/200/300"></img>
+    <div class="font-inter font-semibold pt-5 text-md mx-auto text-neutral-300 my-auto">Admin Acct</div>
+    <div class="font-inter font-medium pt-[1px] text-[12.75px] mx-auto text-neutral-500 my-auto">@admin</div>
+    <div class="font-inter font-medium pt-[18.5px] text-sm mx-auto text-neutral-400 my-auto">I am the admin of this app</div>
+
+
+  </div>
+  </div>
+
+
+  </div>
+
+       <div class="sidebardivs">
+       <span class="quicktext"
+          >Quick Actions
           </span>
         
        
         
         
           <div
-          class="mb-4 mt-4 rounded-sm px-2 flex flex-row items-center content-center"
+          class="quickcont"
         >
           <div
             class="flex flex-row space-x-4 mx-auto items-center content-center"
           >
             <button
-              class="py-2 px-5 bg-black bg-opacity-20 border border-neutral-600 rounded-full"
+              class="py-2 px-5 bg-white bg-opacity-[2%] rounded-md"
             >
               <span
-                class="iconify text-neutral-400 w-4 h-4"
+                class="iconify text-neutral-300 w-4 h-4"
                 data-icon="ep:message"
               ></span>
             </button>
             <button
-              class="py-2 px-5 bg-black bg-opacity-20 border border-neutral-600 rounded-full"
+              class="py-2 px-5 hidden lg:block bg-white bg-opacity-[2%]  rounded-md"
             >
               <span
-                class="iconify text-neutral-400 w-4 h-4"
+                class="iconify text-neutral-300 w-4 h-4"
                 data-icon="ep:edit"
               ></span>
             </button>
             <button
-              class="py-2 px-5 bg-black bg-opacity-20 border border-neutral-600 rounded-full"
+              class="py-2 px-5 bg-white bg-opacity-[2%]  rounded-md"
             >
               <span
-                class="iconify text-neutral-400 w-4 h-4"
+                class="iconify text-neutral-300 w-4 h-4"
                 data-icon="ep:setting"
               ></span>
             </button>
             <button
-            class="py-2 px-5 bg-black bg-opacity-20 border border-neutral-600 rounded-full"
+            class="py-2 px-5 bg-white bg-opacity-[2%]  rounded-md"
           >
             <span
-              class="iconify text-neutral-400 w-4 h-4"
+              class="iconify text-neutral-300 w-4 h-4"
               data-icon="ep:user"
             ></span>
           </button>
           
           </div>
         </div>
-        <div class="py-2 flex flex-row items-center content-center px-1">
-        <span class="pl-[6px] mt-1 text-md  font-medium text-neutral-400 font-sans"
+        </div>
+        <div class="sidebarmessage">
+
+        <div class="msgcont">
+        <span class="pl-[6px] mt-1 text-[15px]  font-medium text-neutral-300 font-sf"
           >Messages
           </span>
 
@@ -63,56 +89,46 @@ export const Sidebar = component$(() => {
         
         <div class="flex flex-col my-1 py-1 space-y-[22px] px-1">
           
-          <div class="flex flex-row space-x-3">
+          <div class="flex flex-row space-x-[10px]">
             <img
-              class="w-10 flex-shrink-0 border border-neutral-600 h-10 mx-2 mr-1 rounded-full"
-              src="https://picsum.photos/100/200"
+              class="w-10 border border-[rgba(0,0,0,0)] flex-shrink-0  h-10 mx-2 mr-1 rounded-md"
+              src="https://picsum.photos/100/100"
             />
 
             <div class="flex flex-col my-auto space-y-[0px] relative w-full">
-              <span class="text-[13px] font-bold font-sf text-neutral-400"> Billy Eilish </span>
+              <span class="text-[13px] font-bold font-sf text-neutral-400"> Bon Jovi </span>
               <span class="text-[11px] font-sf text-neutral-500 pl-[1px]"> Active Yesterday </span>
             </div>
           </div>
 
-          <div class="flex flex-row space-x-3">
+          <div class="flex flex-row space-x-[10px]">
             <img
-              class="w-10 flex-shrink-0 border border-neutral-600 h-10 mx-2 mr-1 rounded-full"
-              src="https://picsum.photos/100/200"
+              class="w-10 border border-[rgba(0,0,0,0)] flex-shrink-0 h-10 mx-2 mr-1 rounded-md"
+              src="https://picsum.photos/100/300"
             />
 
             <div class="flex flex-col my-auto space-y-[0px] relative w-full">
-              <span class="text-[13px] font-bold font-sf text-neutral-400"> PewDewPie </span>
+              <span class="text-[13px] font-bold font-sf text-neutral-400"> Test User </span>
               <span class="text-[11px] font-sf text-neutral-500 pl-[1px]"> Online </span>
             </div>
           </div>
 
-          <div class="flex flex-row space-x-3">
+          <div class="flex flex-row space-x-[10px]">
             <img
-              class="w-10 flex-shrink-0 border border-neutral-600 h-10 mx-2 mr-1 rounded-full"
+              class="w-10 flex-shrink-0 border border-[rgba(0,0,0,0)] h-10 mx-2 mr-1 rounded-md"
               src="https://picsum.photos/100/200"
             />
-
             <div class="flex flex-col my-auto space-y-[0px] relative w-full">
-              <span class="text-[13px] font-bold font-sf text-neutral-400"> Will Smith </span>
+              <span class="text-[13px] font-bold font-sf text-neutral-400"> Trial User </span>
               <span class="text-[11px] font-sf text-neutral-500 pl-[1px]"> Active 3m Ago </span>
             </div>
           </div>
 
-          <div class="flex flex-row space-x-3">
-            <img
-              class="w-10 flex-shrink-0 border border-neutral-600 h-10 mx-2 mr-1 rounded-full"
-              src="https://picsum.photos/100/200"
-            />
-
-            <div class="flex flex-col my-auto space-y-[0px] relative w-full">
-              <span class="text-[13px] font-bold font-sf text-neutral-400"> Taylor Swift </span>
-              <span class="text-[11px] font-sf text-neutral-500 pl-[1px]"> Inactive Since Febraury </span>
-            </div>
+        
+         
+         
           </div>
-         
-         
-        </div>
+          </div>
       </div>
     )
 })

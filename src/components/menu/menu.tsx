@@ -3,27 +3,30 @@ import { Link, useLocation } from '@builder.io/qwik-city';
 export const Menu = component$(() => {
     const loc = useLocation();
     return(
+      <div class="menucont">
         <div
-        class="rounded-none px-2 bg-black bg-opacity-20 border-l border-l-neutral-900 lg:flex flex-col  lg:space-y-1 space-y-3 lg:w-56 py-3"
+        class="menumain"
       >
       <Link id="central" href="/"  class={mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname==='/'?'selected-sidebar-bg selected-sidebar-text selected-sidebar-icon':'unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon'}`)}>
         <span class="iconify  lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto" data-icon="tabler:home"></span>
-        <span class="hidden lg:inline-flex font-sf text-[13px] my-auto ">Home</span>
+        <span class="hidden lg:inline-flex font-inter text-[13.5px] my-auto ">Home</span>
+      </Link>
+      <Link id="central" href="/vids"  class={mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname==='/vids'?'selected-sidebar-bg selected-sidebar-text selected-sidebar-icon':'unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon'}`)}>
+        <span class="iconify  lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto" data-icon="tabler:search"></span>
+        <span class="hidden lg:inline-flex   font-inter text-[13.5px] my-auto ">Search</span>
       </Link>
       <Link id="central" href="/clips"  class={mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname==='/clips'?'selected-sidebar-bg selected-sidebar-text selected-sidebar-icon':'unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon'}`)}>
         <span class="iconify  lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto" data-icon="tabler:video"></span>
-        <span class="hidden lg:inline-flex   font-sf text-[13px] my-auto ">Clips</span>
+        <span class="hidden lg:inline-flex    font-inter text-[13.5px] my-auto ">Clips</span>
       </Link>
       <Link id="central" href="/favs"  class={mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname==='/favs'?'selected-sidebar-bg selected-sidebar-text selected-sidebar-icon':'unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon'}`)}>
         <span class="iconify   lg:w-4 lg:h-4 w-5 h-5  lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto" data-icon="ant-design:heart"></span>
-        <span class="hidden lg:inline-flex   font-sf text-[13px] my-auto ">Favourites</span>
+        <span class="hidden lg:inline-flex   font-inter text-[13.5px] my-auto ">Favourites</span>
       </Link>
-      <Link id="central" href="/vids"  class={mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname==='/vids'?'selected-sidebar-bg selected-sidebar-text selected-sidebar-icon':'unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon'}`)}>
-        <span class="iconify  lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto" data-icon="tabler:video"></span>
-        <span class="hidden lg:inline-flex   font-sf text-[13px] my-auto ">Videos</span>
-      </Link>
+   
      
     
+      </div>
       </div>
     )
 })
