@@ -46,6 +46,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@netlify/vite-plugin-netlify-edge": "^1.1.0",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "interweave": "^13.0.0",

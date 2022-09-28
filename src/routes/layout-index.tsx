@@ -2,7 +2,6 @@ import { component$, Slot } from '@builder.io/qwik';
 import { Header } from '../components/header/header';
 import { Menu } from '../components/menu/menu';
 import { Sidebar } from '~/components/sidebar/sidebar';
-import { Stories } from '~/components/stories/stories';
 export default component$(() => {
   return (
     <div class="bgcol">
