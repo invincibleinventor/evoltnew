@@ -1,17 +1,18 @@
-import { component$, useStore } from '@builder.io/qwik';
-import type { DocumentHead } from '@builder.io/qwik-city';
+import { component$, useStore, _useMutableProps } from '@builder.io/qwik';
+import { DocumentHead, Link } from '@builder.io/qwik-city';
 import { Post } from '~/components/post/post';
 import { stories } from '~/components/stories/stories';
-import * as React from 'react';
 
 
-import Linkify from 'linkify-react';
-import * as linkify from 'linkifyjs'
+
 export default component$(() => {
   var publishpopup=useStore({
     state:false
   }
   )
+
+
+
  
 return(
   <>
@@ -27,9 +28,9 @@ return(
      </button>
 <button class="px-6 ml-auto py-[8px] right-0 ml-auto text-white font-inter font-medium text-[12px] rounded-md bg-blue-800">Publish</button>
 </div>
+
 <textarea 
 id="publishtextarea"
-
 class=" outline-none bg-transparent w-72 md:w-96 h-32 mx-5  rounded-md  font-sf   placeholder:text-neutral-400 text-white md:text-md text-sm placeholder:text-md md:text-md placeholder:text-sm  mt-0 px-0 mb-3 border-none"
       placeholder="What's Poppin? @User"
     ></textarea>

@@ -1,7 +1,6 @@
 import { component$, useStore } from "@builder.io/qwik";
-import { Linkify } from 'react-easy-linkify';
-
-import React from 'react';
+import * as ReactDOM from 'react-dom';
+import * as React from 'react';
 interface mycmpprops{
     
 user: string,
@@ -21,11 +20,13 @@ about:string
 
 }
 
+import Linkify from 'react-linkify'
 
 
 export var Post = component$((props: mycmpprops) => {
   
   const options = {}
+
     return(
     
      <>
@@ -44,8 +45,11 @@ export var Post = component$((props: mycmpprops) => {
 
           </div>
           <div class="">
-        <h1 onClick$={()=>window.location.href=`/posts/${props.id}`} class={` md:leading-normal leading-5 text-[14.5px] md:text-[15.9px] lg:text-[16.5px] font-inter  ${!props.image?`md:mt-[0px] mt-[1px] mb-[8px] md:mb-[3.5px]`:`md:mt-[0px] mt-[1px] mb-[6px]`} font-medium text-neutral-300 md:opacity-90 `}>{props.title}</h1>
-        <h1 class="text-[12px] md:text-[13.5px] font-inter  text-neutral-400 opacity-80 ">{props.content}</h1>
+        <h1 onClick$={()=>window.location.href=`/posts/${props.id}`} class={`cursor-pointer md:leading-6 lg:leading-[25px] text-[15px] md:text-[17.4px] lg:text-[18px] font-inter  ${!props.image?`md:mt-[0px] mt-[1px] mb-[8px] md:mb-[6px] lg:mb-[6.5px]`:`md:mt-[0px] mt-[1px] mb-[6.5px]`} font-medium text-neutral-300 md:opacity-90 `}>{props.title}</h1>
+        <h1 class="text-[12px] md:text-[13.5px] font-inter  text-neutral-400 opacity-80 "> 
+
+      {``}{props.content}
+      </h1>
 
         <div class={`  py-3 pt-[12px] ${!props.image?`hidden`:`flex`}  `}>    <img class="w-full lg:max-w-[430px] max-h-auto rounded-md max-w-[350px] mx-auto md:mx-0  h-full" src={props.image}></img>
 </div>
