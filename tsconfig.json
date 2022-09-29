@@ -16,8 +16,6 @@
     "incremental": true,
     "isolatedModules": true,
     "types": ["vite/client"],
-    "suppressImplicitAnyIndexErrors": true,
-
     "paths": {
       "~/*": ["./src/*"]
     }

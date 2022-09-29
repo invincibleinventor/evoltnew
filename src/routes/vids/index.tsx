@@ -1,5 +1,6 @@
 import { component$ } from '@builder.io/qwik';
 import { DocumentHead } from '@builder.io/qwik-city';
+import { Stories } from '~/components/stories/stories';
 export default component$(() => {
   return (
 
