@@ -1,103 +1,44 @@
 /**
  * @license
- * @builder.io/qwik 0.0.108
+ * @builder.io/qwik 0.9.0
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/BuilderIO/qwik/blob/main/LICENSE
  */
-const qDev$1 = globalThis.qDev === true;
-const qSerialize = globalThis.qSerialize !== false;
-const qDynamicPlatform = globalThis.qDynamicPlatform !== false;
-const qTest = globalThis.qTest === true;
-const seal = (obj) => {
-  if (qDev$1) {
-    Object.seal(obj);
-  }
-};
 const EMPTY_ARRAY$1 = [];
 const EMPTY_OBJ$1 = {};
-if (qDev$1) {
-  Object.freeze(EMPTY_ARRAY$1);
-  Object.freeze(EMPTY_OBJ$1);
-  Error.stackTraceLimit = 9999;
-}
-function isElement$1(value) {
-  return isNode$1(value) && value.nodeType === 1;
-}
-function isNode$1(value) {
-  return value && typeof value.nodeType === "number";
-}
-function assertDefined(value, text, ...parts) {
-  if (qDev$1) {
-    if (value != null)
-      return;
-    throw logErrorAndStop(text, ...parts);
-  }
-}
-function assertEqual(value1, value2, text, ...parts) {
-  if (qDev$1) {
-    if (value1 === value2)
-      return;
-    throw logErrorAndStop(text, ...parts);
-  }
-}
-function assertTrue(value1, text, ...parts) {
-  if (qDev$1) {
-    if (value1 === true)
-      return;
-    throw logErrorAndStop(text, ...parts);
-  }
-}
 const isSerializableObject = (v) => {
   const proto = Object.getPrototypeOf(v);
-  return proto === Object.prototype || proto === null;
+  return proto === Object.prototype || null === proto;
 };
-const isObject = (v) => {
-  return v && typeof v === "object";
-};
-const isArray = (v) => {
-  return Array.isArray(v);
-};
-const isString = (v) => {
-  return typeof v === "string";
-};
-const isFunction = (v) => {
-  return typeof v === "function";
-};
-const OnRenderProp = "q:renderFn";
-const ComponentStylesPrefixContent = "\u2B50\uFE0F";
+const isObject = (v) => v && "object" == typeof v;
+const isArray = (v) => Array.isArray(v);
+const isString = (v) => "string" == typeof v;
+const isFunction = (v) => "function" == typeof v;
 const QSlot = "q:slot";
-const QSlotRef = "q:sref";
-const QSlotS = "q:s";
-const QStyle = "q:style";
-const QScopedStyle = "q:sstyle";
-const QContainerAttr = "q:container";
-const QContainerSelector = "[q\\:container]";
-const RenderEvent = "qRender";
-const ELEMENT_ID = "q:id";
-const ELEMENT_ID_PREFIX = "#";
-const getDocument = (node) => {
-  if (typeof document !== "undefined") {
-    return document;
+const isPromise = (value) => value instanceof Promise;
+const safeCall = (call, thenFn, rejectFn) => {
+  try {
+    const promise = call();
+    return isPromise(promise) ? promise.then(thenFn, rejectFn) : thenFn(promise);
+  } catch (e) {
+    return rejectFn(e);
   }
-  if (node.nodeType === 9) {
-    return node;
-  }
-  const doc = node.ownerDocument;
-  assertDefined(doc, "doc must be defined");
-  return doc;
 };
+const then = (promise, thenFn) => isPromise(promise) ? promise.then(thenFn) : thenFn(promise);
+const promiseAll = (promises) => promises.some(isPromise) ? Promise.all(promises) : promises;
+const isNotNullable = (v) => null != v;
+const delay = (timeout) => new Promise((resolve) => {
+  setTimeout(resolve, timeout);
+});
 let _context;
 const tryGetInvokeContext = () => {
   if (!_context) {
-    const context = typeof document !== "undefined" && document && document.__q_context__;
+    const context = "undefined" != typeof document && document && document.__q_context__;
     if (!context) {
-      return void 0;
+      return;
     }
-    if (isArray(context)) {
-      return document.__q_context__ = newInvokeContextFromTuple(context);
-    }
-    return context;
+    return isArray(context) ? document.__q_context__ = newInvokeContextFromTuple(context) : context;
   }
   return _context;
 };
@@ -110,222 +51,116 @@ const getInvokeContext = () => {
 };
 const useInvokeContext = () => {
   const ctx = getInvokeContext();
-  if (ctx.$event$ !== RenderEvent) {
+  if ("qRender" !== ctx.$event$) {
     throw qError(QError_useInvokeContext);
   }
-  assertDefined(ctx.$hostElement$, `invoke: $hostElement$ must be defined`, ctx);
-  assertDefined(ctx.$waitOn$, `invoke: $waitOn$ must be defined`, ctx);
-  assertDefined(ctx.$renderCtx$, `invoke: $renderCtx$ must be defined`, ctx);
-  assertDefined(ctx.$doc$, `invoke: $doc$ must be defined`, ctx);
-  assertDefined(ctx.$subscriber$, `invoke: $subscriber$ must be defined`, ctx);
-  return ctx;
+  return ctx.$hostElement$, ctx.$waitOn$, ctx.$renderCtx$, ctx.$subscriber$, ctx;
 };
 const invoke = (context, fn, ...args) => {
   const previousContext = _context;
   let returnValue;
   try {
-    _context = context;
-    returnValue = fn.apply(null, args);
+    _context = context, returnValue = fn.apply(null, args);
   } finally {
     _context = previousContext;
   }
   return returnValue;
 };
 const waitAndRun = (ctx, callback) => {
-  const previousWait = ctx.$waitOn$.slice();
-  ctx.$waitOn$.push(Promise.allSettled(previousWait).then(callback));
+  const waitOn = ctx.$waitOn$;
+  if (0 === waitOn.length) {
+    const result = callback();
+    isPromise(result) && waitOn.push(result);
+  } else {
+    waitOn.push(Promise.all(waitOn).then(callback));
+  }
 };
 const newInvokeContextFromTuple = (context) => {
   const element = context[0];
-  return newInvokeContext(getDocument(element), void 0, element, context[1], context[2]);
+  return newInvokeContext(void 0, element, context[1], context[2]);
 };
-const newInvokeContext = (doc, hostElement, element, event, url) => {
-  const ctx = {
-    $seq$: 0,
-    $doc$: doc,
-    $hostElement$: hostElement,
-    $element$: element,
-    $event$: event,
-    $url$: url,
-    $qrl$: void 0,
-    $props$: void 0,
-    $renderCtx$: void 0,
-    $subscriber$: void 0,
-    $waitOn$: void 0
-  };
-  seal(ctx);
-  return ctx;
-};
-const getWrappingContainer = (el) => {
-  return el.closest(QContainerSelector);
-};
-const isNode = (value) => {
-  return value && typeof value.nodeType === "number";
-};
-const isDocument = (value) => {
-  return value && value.nodeType === 9;
-};
-const isElement = (value) => {
-  return value.nodeType === 1;
-};
-const isQwikElement = (value) => {
-  return isNode(value) && (value.nodeType === 1 || value.nodeType === 111);
-};
-const isVirtualElement = (value) => {
-  return value.nodeType === 111;
-};
-const isText = (value) => {
-  return value.nodeType === 3;
-};
-function assertQwikElement(el) {
-  if (qDev$1) {
-    if (!isQwikElement(el)) {
-      throw new Error("Not a Qwik Element");
-    }
-  }
-}
-const isPromise = (value) => {
-  return value instanceof Promise;
-};
-const safeCall = (call, thenFn, rejectFn) => {
-  try {
-    const promise = call();
-    if (isPromise(promise)) {
-      return promise.then(thenFn, rejectFn);
-    } else {
-      return thenFn(promise);
-    }
-  } catch (e) {
-    return rejectFn(e);
-  }
-};
-const then = (promise, thenFn) => {
-  return isPromise(promise) ? promise.then(thenFn) : thenFn(promise);
-};
-const promiseAll = (promises) => {
-  const hasPromise = promises.some(isPromise);
-  if (hasPromise) {
-    return Promise.all(promises);
-  }
-  return promises;
-};
-const isNotNullable = (v) => {
-  return v != null;
-};
-const delay = (timeout) => {
-  return new Promise((resolve) => {
-    setTimeout(resolve, timeout);
-  });
-};
-const createPlatform$1 = (doc) => {
+const newInvokeContext = (hostElement, element, event, url) => ({
+  $seq$: 0,
+  $hostElement$: hostElement,
+  $element$: element,
+  $event$: event,
+  $url$: url,
+  $qrl$: void 0,
+  $props$: void 0,
+  $renderCtx$: void 0,
+  $subscriber$: void 0,
+  $waitOn$: void 0
+});
+const getWrappingContainer = (el) => el.closest("[q\\:container]");
+const isNode = (value) => value && "number" == typeof value.nodeType;
+const isDocument = (value) => value && 9 === value.nodeType;
+const isElement = (value) => 1 === value.nodeType;
+const isQwikElement = (value) => isNode(value) && (1 === value.nodeType || 111 === value.nodeType);
+const isVirtualElement = (value) => 111 === value.nodeType;
+const isModule = (module) => isObject(module) && "Module" === module[Symbol.toStringTag];
+let _platform = (() => {
   const moduleCache = /* @__PURE__ */ new Map();
   return {
     isServer: false,
     importSymbol(containerEl, url, symbolName) {
-      const urlDoc = toUrl$1(doc, containerEl, url).toString();
+      const urlDoc = ((doc, containerEl2, url2) => {
+        var _a;
+        const baseURI = doc.baseURI;
+        const base = new URL((_a = containerEl2.getAttribute("q:base")) != null ? _a : baseURI, baseURI);
+        return new URL(url2, base);
+      })(containerEl.ownerDocument, containerEl, url).toString();
       const urlCopy = new URL(urlDoc);
-      urlCopy.hash = "";
-      urlCopy.search = "";
+      urlCopy.hash = "", urlCopy.search = "";
       const importURL = urlCopy.href;
       const mod = moduleCache.get(importURL);
-      if (mod) {
-        return mod[symbolName];
-      }
-      return import(
-        /* @vite-ignore */
-        importURL
-      ).then((mod2) => {
-        mod2 = findModule(mod2);
-        moduleCache.set(importURL, mod2);
-        return mod2[symbolName];
+      return mod ? mod[symbolName] : import(importURL).then((mod2) => {
+        return module = mod2, mod2 = Object.values(module).find(isModule) || module, moduleCache.set(importURL, mod2), mod2[symbolName];
+        var module;
       });
     },
-    raf: (fn) => {
-      return new Promise((resolve) => {
-        requestAnimationFrame(() => {
-          resolve(fn());
-        });
+    raf: (fn) => new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        resolve(fn());
       });
-    },
-    nextTick: (fn) => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(fn());
-        });
+    }),
+    nextTick: (fn) => new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(fn());
       });
-    },
+    }),
     chunkForSymbol() {
-      return void 0;
     }
   };
-};
-const findModule = (module) => {
-  return Object.values(module).find(isModule) || module;
-};
-const isModule = (module) => {
-  return isObject(module) && module[Symbol.toStringTag] === "Module";
-};
-const toUrl$1 = (doc, containerEl, url) => {
-  var _a;
-  const baseURI = doc.baseURI;
-  const base = new URL((_a = containerEl.getAttribute("q:base")) != null ? _a : baseURI, baseURI);
-  return new URL(url, base);
-};
-const setPlatform = (doc, plt) => doc[DocumentPlatform] = plt;
-const getPlatform = (docOrNode) => {
-  const doc = getDocument(docOrNode);
-  return doc[DocumentPlatform] || (doc[DocumentPlatform] = createPlatform$1(doc));
-};
-const isServer$1 = (ctx) => {
-  var _a, _b;
-  if (qDynamicPlatform) {
-    return (_b = (_a = ctx.$renderCtx$) == null ? void 0 : _a.$static$.$containerState$.$platform$.isServer) != null ? _b : getPlatform(ctx.$doc$).isServer;
-  }
-  return false;
-};
-const DocumentPlatform = ":platform:";
-const directSetAttribute = (el, prop, value) => {
-  return el.setAttribute(prop, value);
-};
-const directGetAttribute = (el, prop) => {
-  return el.getAttribute(prop);
-};
+})();
+const setPlatform = (plt) => _platform = plt;
+const getPlatform = () => _platform;
+const isServer$1 = () => _platform.isServer;
+const directSetAttribute = (el, prop, value) => el.setAttribute(prop, value);
+const directGetAttribute = (el, prop) => el.getAttribute(prop);
 const ON_PROP_REGEX = /^(on|window:|document:)/;
-const isOnProp = (prop) => {
-  return ON_PROP_REGEX.test(prop);
-};
+const isOnProp = (prop) => prop.endsWith("$") && ON_PROP_REGEX.test(prop);
 const addQRLListener = (listenersMap, prop, input) => {
   let existingListeners = listenersMap[prop];
-  if (!existingListeners) {
-    listenersMap[prop] = existingListeners = [];
-  }
+  existingListeners || (listenersMap[prop] = existingListeners = []);
   for (const qrl of input) {
     const hash = qrl.$hash$;
     let replaced = false;
     for (let i = 0; i < existingListeners.length; i++) {
-      const existing = existingListeners[i];
-      if (existing.$hash$ === hash) {
-        existingListeners.splice(i, 1, qrl);
-        replaced = true;
+      if (existingListeners[i].$hash$ === hash) {
+        existingListeners.splice(i, 1, qrl), replaced = true;
         break;
       }
     }
-    if (!replaced) {
-      existingListeners.push(qrl);
-    }
+    replaced || existingListeners.push(qrl);
   }
   return false;
 };
 const setEvent = (listenerMap, prop, input) => {
-  assertTrue(prop.endsWith("$"), "render: event property does not end with $", prop);
+  prop.endsWith("$");
   const qrls = isArray(input) ? input.map(ensureQrl) : [ensureQrl(input)];
-  prop = normalizeOnProp(prop.slice(0, -1));
-  addQRLListener(listenerMap, prop, qrls);
-  return prop;
+  return prop = normalizeOnProp(prop.slice(0, -1)), addQRLListener(listenerMap, prop, qrls), prop;
 };
-const ensureQrl = (value) => {
-  return isQrl$1(value) ? value : $(value);
-};
+const ensureQrl = (value) => isQrl$1(value) ? value : $(value);
 const getDomListeners = (ctx, containerEl) => {
   const attributes = ctx.$element$.attributes;
   const listeners = {};
@@ -333,16 +168,11 @@ const getDomListeners = (ctx, containerEl) => {
     const { name, value } = attributes.item(i);
     if (name.startsWith("on:") || name.startsWith("on-window:") || name.startsWith("on-document:")) {
       let array = listeners[name];
-      if (!array) {
-        listeners[name] = array = [];
-      }
+      array || (listeners[name] = array = []);
       const urls = value.split("\n");
       for (const url of urls) {
         const qrl = parseQRL(url, containerEl);
-        if (qrl.$capture$) {
-          inflateQrl(qrl, ctx);
-        }
-        array.push(qrl);
+        qrl.$capture$ && inflateQrl(qrl, ctx), array.push(qrl);
       }
     }
   }
@@ -354,16 +184,9 @@ const useSequentialScope = () => {
   const hostElement = ctx.$hostElement$;
   const elCtx = getContext(hostElement);
   const seq = elCtx.$seq$ ? elCtx.$seq$ : elCtx.$seq$ = [];
-  ctx.$seq$++;
-  const set = (value) => {
-    if (qDev$1) {
-      verifySerializable(value);
-    }
-    return seq[i] = value;
-  };
-  return {
+  return ctx.$seq$++, {
     get: seq[i],
-    set,
+    set: (value) => seq[i] = value,
     i,
     ctx
   };
@@ -372,319 +195,81 @@ const useOn = (event, eventQrl) => _useOn(`on-${event}`, eventQrl);
 const _useOn = (eventName, eventQrl) => {
   const invokeCtx = useInvokeContext();
   const ctx = getContext(invokeCtx.$hostElement$);
-  assertQrl(eventQrl);
   addQRLListener(ctx.li, normalizeOnProp(eventName), [eventQrl]);
 };
-const emitEvent = (el, eventName, detail, bubbles) => {
-  if (el && typeof CustomEvent === "function") {
-    el.dispatchEvent(new CustomEvent(eventName, {
-      detail,
-      bubbles,
-      composed: bubbles
-    }));
-  }
-};
+const getDocument = (node) => "undefined" != typeof document ? document : 9 === node.nodeType ? node : node.ownerDocument;
 const jsx = (type, props, key) => {
-  if (qDev$1) {
-    if (!isString(type) && !isFunction(type)) {
-      throw qError(QError_invalidJsxNodeType, type);
-    }
-  }
-  const processed = key == null ? null : String(key);
+  const processed = null == key ? null : String(key);
   return new JSXNodeImpl(type, props, processed);
 };
-const SKIP_RENDER_TYPE = ":skipRender";
 class JSXNodeImpl {
   constructor(type, props, key = null) {
-    this.type = type;
-    this.props = props;
-    this.key = key;
-    seal(this);
+    this.type = type, this.props = props, this.key = key;
   }
 }
-const isJSXNode = (n) => {
-  if (qDev$1) {
-    if (n instanceof JSXNodeImpl) {
-      return true;
-    }
-    if (isObject(n) && "key" in n && "props" in n && "type" in n) {
-      logWarn(`Duplicate implementations of "JSXNode" found`);
-      return true;
-    }
-    return false;
-  } else {
-    return n instanceof JSXNodeImpl;
-  }
-};
+const isJSXNode = (n) => n instanceof JSXNodeImpl;
 const Fragment = (props) => props.children;
-const QOnce = "qonce";
 const SkipRender = Symbol("skip render");
 const SSRComment = () => null;
 const Virtual = (props) => props.children;
 const InternalSSRStream = () => null;
-const fromCamelToKebabCase = (text) => {
-  return text.replace(/([A-Z])/g, "-$1").toLowerCase();
-};
-const executeComponent = (rctx, elCtx) => {
-  elCtx.$dirty$ = false;
-  elCtx.$mounted$ = true;
-  elCtx.$slots$ = [];
-  const hostElement = elCtx.$element$;
-  const onRenderQRL = elCtx.$renderQrl$;
-  const staticCtx = rctx.$static$;
-  const containerState = staticCtx.$containerState$;
-  const props = elCtx.$props$;
-  const newCtx = pushRenderContext(rctx, elCtx);
-  const invocatinContext = newInvokeContext(staticCtx.$doc$, hostElement, void 0, RenderEvent);
-  const waitOn = invocatinContext.$waitOn$ = [];
-  assertDefined(onRenderQRL, `render: host element to render must has a $renderQrl$:`, elCtx);
-  assertDefined(props, `render: host element to render must has defined props`, elCtx);
-  newCtx.$cmpCtx$ = elCtx;
-  invocatinContext.$subscriber$ = hostElement;
-  invocatinContext.$renderCtx$ = rctx;
-  containerState.$hostsStaging$.delete(hostElement);
-  containerState.$subsManager$.$clearSub$(hostElement);
-  const onRenderFn = onRenderQRL.getFn(invocatinContext);
-  return safeCall(() => onRenderFn(props), (jsxNode) => {
-    staticCtx.$hostElements$.add(hostElement);
-    const waitOnPromise = promiseAll(waitOn);
-    return then(waitOnPromise, () => {
-      if (isFunction(jsxNode)) {
-        elCtx.$dirty$ = false;
-        jsxNode = jsxNode();
-      } else if (elCtx.$dirty$) {
-        return executeComponent(rctx, elCtx);
-      }
-      elCtx.$attachedListeners$ = false;
-      return {
-        node: jsxNode,
-        rctx: newCtx
-      };
-    });
-  }, (err) => {
-    logError(err);
-  });
-};
-const createRenderContext = (doc, containerState) => {
-  const ctx = {
-    $static$: {
-      $doc$: doc,
-      $containerState$: containerState,
-      $containerEl$: containerState.$containerEl$,
-      $hostElements$: /* @__PURE__ */ new Set(),
-      $operations$: [],
-      $postOperations$: [],
-      $roots$: [],
-      $addSlots$: [],
-      $rmSlots$: []
-    },
-    $cmpCtx$: void 0,
-    $localStack$: []
-  };
-  seal(ctx);
-  seal(ctx.$static$);
-  return ctx;
-};
-const pushRenderContext = (ctx, elCtx) => {
-  const newCtx = {
-    $static$: ctx.$static$,
-    $cmpCtx$: ctx.$cmpCtx$,
-    $localStack$: ctx.$localStack$.concat(elCtx)
-  };
-  return newCtx;
-};
-const joinClasses = (...input) => {
-  const set = /* @__PURE__ */ new Set();
-  input.forEach((value) => {
-    parseClassAny(value).forEach((v) => set.add(v));
-  });
-  return Array.from(set).join(" ");
-};
-const parseClassAny = (obj) => {
-  if (isString(obj)) {
-    return parseClassList(obj);
-  } else if (isObject(obj)) {
-    if (isArray(obj)) {
-      return obj;
-    } else {
-      const output = [];
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          const value = obj[key];
-          if (value) {
-            output.push(key);
-          }
-        }
-      }
-      return output;
-    }
-  }
-  return [];
-};
-const parseClassListRegex = /\s/;
-const parseClassList = (value) => !value ? EMPTY_ARRAY$1 : value.split(parseClassListRegex);
-const stringifyStyle = (obj) => {
-  if (obj == null)
-    return "";
-  if (typeof obj == "object") {
-    if (isArray(obj)) {
-      throw qError(QError_stringifyClassOrStyle, obj, "style");
-    } else {
-      const chunks = [];
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          const value = obj[key];
-          if (value) {
-            chunks.push(fromCamelToKebabCase(key) + ":" + value);
-          }
-        }
-      }
-      return chunks.join(";");
-    }
-  }
-  return String(obj);
-};
-const getNextIndex = (ctx) => {
-  return intToStr(ctx.$static$.$containerState$.$elementIndex$++);
-};
-const getQId = (el) => {
-  const ctx = tryGetContext(el);
-  if (ctx) {
-    return ctx.$id$;
-  }
-  return null;
-};
-const setQId = (rctx, ctx) => {
-  const id = getNextIndex(rctx);
-  ctx.$id$ = id;
-  if (qSerialize) {
-    ctx.$element$.setAttribute(ELEMENT_ID, id);
-  }
-};
-const hasStyle = (containerState, styleId) => {
-  return containerState.$styleIds$.has(styleId);
-};
-const ALLOWS_PROPS = [QSlot];
-const SKIPS_PROPS = [QSlot, OnRenderProp, "children"];
-const hashCode = (text, hash = 0) => {
-  if (text.length === 0)
-    return hash;
-  for (let i = 0; i < text.length; i++) {
-    const chr = text.charCodeAt(i);
-    hash = (hash << 5) - hash + chr;
-    hash |= 0;
-  }
-  return Number(Math.abs(hash)).toString(36);
-};
-const styleKey = (qStyles, index2) => {
-  assertQrl(qStyles);
-  return `${hashCode(qStyles.$hash$)}-${index2}`;
-};
-const styleContent = (styleId) => {
-  return ComponentStylesPrefixContent + styleId;
-};
-const serializeSStyle = (scopeIds) => {
-  const value = scopeIds.join(" ");
-  if (value.length > 0) {
-    return value;
-  }
-  return void 0;
-};
+const fromCamelToKebabCase = (text) => text.replace(/([A-Z])/g, "-$1").toLowerCase();
 const setAttribute = (ctx, el, prop, value) => {
-  if (ctx) {
-    ctx.$operations$.push({
-      $operation$: _setAttribute,
-      $args$: [el, prop, value]
-    });
-  } else {
-    _setAttribute(el, prop, value);
-  }
+  ctx ? ctx.$operations$.push({
+    $operation$: _setAttribute,
+    $args$: [el, prop, value]
+  }) : _setAttribute(el, prop, value);
 };
 const _setAttribute = (el, prop, value) => {
-  if (value == null || value === false) {
+  if (null == value || false === value) {
     el.removeAttribute(prop);
   } else {
-    const str = value === true ? "" : String(value);
+    const str = true === value ? "" : String(value);
     directSetAttribute(el, prop, str);
   }
 };
-const setProperty$1 = (ctx, node, key, value) => {
-  if (ctx) {
-    ctx.$operations$.push({
-      $operation$: _setProperty,
-      $args$: [node, key, value]
-    });
-  } else {
-    _setProperty(node, key, value);
-  }
+const setProperty = (ctx, node, key, value) => {
+  ctx ? ctx.$operations$.push({
+    $operation$: _setProperty,
+    $args$: [node, key, value]
+  }) : _setProperty(node, key, value);
 };
 const _setProperty = (node, key, value) => {
   try {
     node[key] = value;
   } catch (err) {
-    logError(codeToText(QError_setProperty), { node, key, value }, err);
+    logError(codeToText(QError_setProperty), {
+      node,
+      key,
+      value
+    }, err);
   }
 };
-const createElement = (doc, expectTag, isSvg) => {
-  const el = isSvg ? doc.createElementNS(SVG_NS, expectTag) : doc.createElement(expectTag);
-  return el;
-};
-const insertBefore = (ctx, parent, newChild, refChild) => {
-  ctx.$operations$.push({
-    $operation$: directInsertBefore,
-    $args$: [parent, newChild, refChild ? refChild : null]
-  });
-  return newChild;
-};
-const appendChild = (ctx, parent, newChild) => {
-  ctx.$operations$.push({
-    $operation$: directAppendChild,
-    $args$: [parent, newChild]
-  });
-  return newChild;
-};
+const createElement = (doc, expectTag, isSvg) => isSvg ? doc.createElementNS(SVG_NS, expectTag) : doc.createElement(expectTag);
+const insertBefore = (ctx, parent, newChild, refChild) => (ctx.$operations$.push({
+  $operation$: directInsertBefore,
+  $args$: [parent, newChild, refChild || null]
+}), newChild);
+const appendChild = (ctx, parent, newChild) => (ctx.$operations$.push({
+  $operation$: directAppendChild,
+  $args$: [parent, newChild]
+}), newChild);
 const appendHeadStyle = (ctx, styleTask) => {
-  ctx.$containerState$.$styleIds$.add(styleTask.styleId);
-  ctx.$postOperations$.push({
+  ctx.$containerState$.$styleIds$.add(styleTask.styleId), ctx.$postOperations$.push({
     $operation$: _appendHeadStyle,
-    $args$: [ctx.$doc$, ctx.$containerEl$, styleTask]
+    $args$: [ctx.$containerState$.$containerEl$, styleTask]
   });
-};
-const setClasslist = (ctx, elm, toRemove, toAdd) => {
-  if (ctx) {
-    ctx.$operations$.push({
-      $operation$: _setClasslist,
-      $args$: [elm, toRemove, toAdd]
-    });
-  } else {
-    _setClasslist(elm, toRemove, toAdd);
-  }
 };
 const _setClasslist = (elm, toRemove, toAdd) => {
   const classList = elm.classList;
-  classList.remove(...toRemove);
-  classList.add(...toAdd);
+  classList.remove(...toRemove), classList.add(...toAdd);
 };
-const _appendHeadStyle = (doc, containerEl, styleTask) => {
+const _appendHeadStyle = (containerEl, styleTask) => {
+  const doc = getDocument(containerEl);
   const isDoc = doc.documentElement === containerEl;
   const headEl = doc.head;
   const style = doc.createElement("style");
-  if (isDoc && !headEl) {
-    logWarn("document.head is undefined");
-  }
-  directSetAttribute(style, QStyle, styleTask.styleId);
-  style.textContent = styleTask.content;
-  if (isDoc && headEl) {
-    directAppendChild(headEl, style);
-  } else {
-    directInsertBefore(containerEl, style, containerEl.firstChild);
-  }
-};
-const prepend = (ctx, parent, newChild) => {
-  ctx.$operations$.push({
-    $operation$: directInsertBefore,
-    $args$: [parent, newChild, parent.firstChild]
-  });
+  directSetAttribute(style, "q:style", styleTask.styleId), style.textContent = styleTask.content, isDoc && headEl ? directAppendChild(headEl, style) : directInsertBefore(containerEl, style, containerEl.firstChild);
 };
 const removeNode = (ctx, el) => {
   ctx.$operations$.push({
@@ -695,21 +280,16 @@ const removeNode = (ctx, el) => {
 const _removeNode = (el, staticCtx) => {
   const parent = el.parentElement;
   if (parent) {
-    if (el.nodeType === 1 || el.nodeType === 111) {
+    if (1 === el.nodeType || 111 === el.nodeType) {
       const subsManager = staticCtx.$containerState$.$subsManager$;
       cleanupTree(el, staticCtx, subsManager, true);
     }
     directRemoveChild(parent, el);
-  } else if (qDev$1) {
-    logWarn("Trying to remove component already removed", el);
   }
 };
 const createTemplate = (doc, slotName) => {
   const template = createElement(doc, "q:template", false);
-  directSetAttribute(template, QSlot, slotName);
-  directSetAttribute(template, "hidden", "");
-  directSetAttribute(template, "aria-hidden", "true");
-  return template;
+  return directSetAttribute(template, QSlot, slotName), directSetAttribute(template, "hidden", ""), directSetAttribute(template, "aria-hidden", "true"), template;
 };
 const executeDOMRender = (ctx) => {
   for (const op of ctx.$operations$) {
@@ -717,22 +297,17 @@ const executeDOMRender = (ctx) => {
   }
   resolveSlotProjection(ctx);
 };
-const getKey = (el) => {
-  return directGetAttribute(el, "q:key");
-};
+const getKey = (el) => directGetAttribute(el, "q:key");
 const setKey = (el, key) => {
-  if (key !== null) {
-    directSetAttribute(el, "q:key", key);
-  }
+  null !== key && directSetAttribute(el, "q:key", key);
 };
 const resolveSlotProjection = (ctx) => {
   const subsManager = ctx.$containerState$.$subsManager$;
   ctx.$rmSlots$.forEach((slotEl) => {
     const key = getKey(slotEl);
-    assertDefined(key, "slots must have a key");
     const slotChildren = getChildren(slotEl, "root");
     if (slotChildren.length > 0) {
-      const sref = slotEl.getAttribute(QSlotRef);
+      const sref = slotEl.getAttribute("q:sref");
       const hostCtx = ctx.$roots$.find((r) => r.$id$ === sref);
       if (hostCtx) {
         const template = createTemplate(ctx.$doc$, key);
@@ -745,124 +320,34 @@ const resolveSlotProjection = (ctx) => {
         cleanupTree(slotEl, ctx, subsManager, false);
       }
     }
-  });
-  ctx.$addSlots$.forEach(([slotEl, hostElm]) => {
+  }), ctx.$addSlots$.forEach(([slotEl, hostElm]) => {
     const key = getKey(slotEl);
-    assertDefined(key, "slots must have a key");
-    const template = Array.from(hostElm.childNodes).find((node) => {
-      return isSlotTemplate(node) && node.getAttribute(QSlot) === key;
-    });
-    if (template) {
-      const children = getChildren(template, "root");
-      children.forEach((child) => {
-        directAppendChild(slotEl, child);
-      });
-      template.remove();
-    }
+    const template = Array.from(hostElm.childNodes).find((node) => isSlotTemplate(node) && node.getAttribute(QSlot) === key);
+    template && (getChildren(template, "root").forEach((child) => {
+      directAppendChild(slotEl, child);
+    }), template.remove());
   });
 };
-const createTextNode = (doc, text) => {
-  return doc.createTextNode(text);
-};
-const printRenderStats = (ctx) => {
-  var _a;
-  if (qDev$1) {
-    if (typeof window !== "undefined" && window.document != null) {
-      const byOp = {};
-      for (const op of ctx.$operations$) {
-        byOp[op.$operation$.name] = ((_a = byOp[op.$operation$.name]) != null ? _a : 0) + 1;
-      }
-      const stats = {
-        byOp,
-        roots: ctx.$roots$.map((ctx2) => ctx2.$element$),
-        hostElements: Array.from(ctx.$hostElements$),
-        operations: ctx.$operations$.map((v) => [v.$operation$.name, ...v.$args$])
-      };
-      const noOps = ctx.$operations$.length === 0;
-      logDebug("Render stats.", noOps ? "No operations" : "", stats);
-    }
-  }
-};
-const VIRTUAL_SYMBOL = "__virtual";
-const newVirtualElement = (doc) => {
-  const open = doc.createComment("qv ");
-  const close = doc.createComment("/qv");
-  return new VirtualElementImpl(open, close);
-};
-const parseVirtualAttributes = (str) => {
-  if (!str) {
-    return /* @__PURE__ */ new Map();
-  }
-  const attributes = str.split(" ");
-  return new Map(attributes.map((attr) => {
-    const index2 = attr.indexOf("=");
-    if (index2 >= 0) {
-      return [attr.slice(0, index2), unescape(attr.slice(index2 + 1))];
-    } else {
-      return [attr, ""];
-    }
-  }));
-};
-const serializeVirtualAttributes = (map) => {
-  const attributes = [];
-  map.forEach((value, key) => {
-    if (!value) {
-      attributes.push(`${key}`);
-    } else {
-      attributes.push(`${key}=${escape$1(value)}`);
-    }
-  });
-  return attributes.join(" ");
-};
-const SHOW_COMMENT$1 = 128;
-const FILTER_ACCEPT$1 = 1;
-const FILTER_REJECT$1 = 2;
-const walkerVirtualByAttribute = (el, prop, value) => {
-  return el.ownerDocument.createTreeWalker(el, SHOW_COMMENT$1, {
-    acceptNode(c) {
-      const virtual = getVirtualElement(c);
-      if (virtual) {
-        return directGetAttribute(virtual, prop) === value ? FILTER_ACCEPT$1 : FILTER_REJECT$1;
-      }
-      return FILTER_REJECT$1;
-    }
-  });
-};
-const queryAllVirtualByAttribute = (el, prop, value) => {
-  const walker = walkerVirtualByAttribute(el, prop, value);
-  const pars = [];
-  let currentNode = null;
-  while (currentNode = walker.nextNode()) {
-    pars.push(getVirtualElement(currentNode));
-  }
-  return pars;
-};
-const escape$1 = (s) => {
-  return s.replace(/ /g, "+");
-};
-const unescape = (s) => {
-  return s.replace(/\+/g, " ");
-};
-const VIRTUAL = ":virtual";
 class VirtualElementImpl {
   constructor(open, close) {
-    this.open = open;
-    this.close = close;
-    this._qc_ = null;
-    this.nodeType = 111;
-    this.localName = VIRTUAL;
-    this.nodeName = VIRTUAL;
+    this.open = open, this.close = close, this._qc_ = null, this.nodeType = 111, this.localName = ":virtual", this.nodeName = ":virtual";
     const doc = this.ownerDocument = open.ownerDocument;
-    this.template = createElement(doc, "template", false);
-    this.attributes = parseVirtualAttributes(open.data.slice(3));
-    assertTrue(open.data.startsWith("qv "), "comment is not a qv");
-    open[VIRTUAL_SYMBOL] = this;
-    seal(this);
+    this.template = createElement(doc, "template", false), this.attributes = ((str) => {
+      if (!str) {
+        return /* @__PURE__ */ new Map();
+      }
+      const attributes = str.split(" ");
+      return new Map(attributes.map((attr) => {
+        const index2 = attr.indexOf("=");
+        return index2 >= 0 ? [attr.slice(0, index2), (s = attr.slice(index2 + 1), s.replace(/\+/g, " "))] : [attr, ""];
+        var s;
+      }));
+    })(open.data.slice(3)), open.data.startsWith("qv "), open.__virtual = this;
   }
   insertBefore(node, ref) {
     const parent = this.parentElement;
     if (parent) {
-      const ref2 = ref ? ref : this.close;
+      const ref2 = ref || this.close;
       parent.insertBefore(node, ref2);
     } else {
       this.template.insertBefore(node, ref);
@@ -873,10 +358,7 @@ class VirtualElementImpl {
     const parent = this.parentElement;
     if (parent) {
       const ch = Array.from(this.childNodes);
-      assertEqual(this.template.childElementCount, 0, "children should be empty");
-      parent.removeChild(this.open);
-      this.template.append(...ch);
-      parent.removeChild(this.close);
+      this.template.childElementCount, parent.removeChild(this.open), this.template.append(...ch), parent.removeChild(this.close);
     }
   }
   appendChild(node) {
@@ -884,25 +366,17 @@ class VirtualElementImpl {
   }
   insertBeforeTo(newParent, child) {
     const ch = Array.from(this.childNodes);
-    if (this.parentElement) {
-      console.warn("already attached");
-    }
     newParent.insertBefore(this.open, child);
     for (const c of ch) {
       newParent.insertBefore(c, child);
     }
-    newParent.insertBefore(this.close, child);
-    assertEqual(this.template.childElementCount, 0, "children should be empty");
+    newParent.insertBefore(this.close, child), this.template.childElementCount;
   }
   appendTo(newParent) {
     this.insertBeforeTo(newParent, null);
   }
   removeChild(child) {
-    if (this.parentElement) {
-      this.parentElement.removeChild(child);
-    } else {
-      this.template.removeChild(child);
-    }
+    this.parentElement ? this.parentElement.removeChild(child) : this.template.removeChild(child);
   }
   getAttribute(prop) {
     var _a;
@@ -912,16 +386,10 @@ class VirtualElementImpl {
     return this.attributes.has(prop);
   }
   setAttribute(prop, value) {
-    this.attributes.set(prop, value);
-    if (qSerialize) {
-      this.open.data = updateComment(this.attributes);
-    }
+    this.attributes.set(prop, value), this.open.data = updateComment(this.attributes);
   }
   removeAttribute(prop) {
-    this.attributes.delete(prop);
-    if (qSerialize) {
-      this.open.data = updateComment(this.attributes);
-    }
+    this.attributes.delete(prop), this.open.data = updateComment(this.attributes);
   }
   matches(_) {
     return false;
@@ -931,23 +399,13 @@ class VirtualElementImpl {
   }
   closest(query) {
     const parent = this.parentElement;
-    if (parent) {
-      return parent.closest(query);
-    }
-    return null;
+    return parent ? parent.closest(query) : null;
   }
   querySelectorAll(query) {
     const result = [];
-    const ch = getChildren(this, "elements");
-    ch.forEach((el) => {
-      if (isQwikElement(el)) {
-        if (el.matches(query)) {
-          result.push(el);
-        }
-        result.concat(Array.from(el.querySelectorAll(query)));
-      }
-    });
-    return result;
+    return getChildren(this, "elements").forEach((el) => {
+      isQwikElement(el) && (el.matches(query) && result.push(el), result.concat(Array.from(el.querySelectorAll(query))));
+    }), result;
   }
   querySelector(query) {
     for (const el of this.childNodes) {
@@ -956,7 +414,7 @@ class VirtualElementImpl {
           return el;
         }
         const v = el.querySelector(query);
-        if (v !== null) {
+        if (null !== v) {
           return v;
         }
       }
@@ -966,13 +424,9 @@ class VirtualElementImpl {
   get firstChild() {
     if (this.parentElement) {
       const first = this.open.nextSibling;
-      if (first === this.close) {
-        return null;
-      }
-      return first;
-    } else {
-      return this.template.firstChild;
+      return first === this.close ? null : first;
     }
+    return this.template.firstChild;
   }
   get nextSibling() {
     return this.close.nextSibling;
@@ -986,12 +440,8 @@ class VirtualElementImpl {
     }
     const nodes = [];
     let node = this.open;
-    while (node = node.nextSibling) {
-      if (node !== this.close) {
-        nodes.push(node);
-      } else {
-        break;
-      }
+    for (; (node = node.nextSibling) && node !== this.close; ) {
+      nodes.push(node);
     }
     return nodes;
   }
@@ -1002,11 +452,15 @@ class VirtualElementImpl {
     return this.open.parentElement;
   }
 }
-const updateComment = (attributes) => {
-  return `qv ${serializeVirtualAttributes(attributes)}`;
-};
+const updateComment = (attributes) => `qv ${((map) => {
+  const attributes2 = [];
+  return map.forEach((value, key) => {
+    var s;
+    value ? attributes2.push(`${key}=${s = value, s.replace(/ /g, "+")}`) : attributes2.push(`${key}`);
+  }), attributes2.join(" ");
+})(attributes)}`;
 const processVirtualNodes = (node) => {
-  if (node == null) {
+  if (null == node) {
     return null;
   }
   if (isComment(node)) {
@@ -1018,7 +472,7 @@ const processVirtualNodes = (node) => {
   return node;
 };
 const getVirtualElement = (open) => {
-  const virtual = open[VIRTUAL_SYMBOL];
+  const virtual = open.__virtual;
   if (virtual) {
     return virtual;
   }
@@ -1031,177 +485,299 @@ const getVirtualElement = (open) => {
 const findClose = (open) => {
   let node = open.nextSibling;
   let stack = 1;
-  while (node) {
+  for (; node; ) {
     if (isComment(node)) {
       if (node.data.startsWith("qv ")) {
         stack++;
-      } else if (node.data === "/qv") {
-        stack--;
-        if (stack === 0) {
-          return node;
-        }
+      } else if ("/qv" === node.data && (stack--, 0 === stack)) {
+        return node;
       }
     }
     node = node.nextSibling;
   }
   throw new Error("close not found");
 };
-const isComment = (node) => {
-  return node.nodeType === 8;
-};
-const getRootNode = (node) => {
-  if (node == null) {
-    return null;
+const isComment = (node) => 8 === node.nodeType;
+const getRootNode = (node) => null == node ? null : isVirtualElement(node) ? node.open : node;
+const createContext$1 = (name) => Object.freeze({
+  id: fromCamelToKebabCase(name)
+});
+const useContextProvider = (context, newValue) => {
+  const { get, set, ctx } = useSequentialScope();
+  if (void 0 !== get) {
+    return;
   }
-  if (isVirtualElement(node)) {
-    return node.open;
-  } else {
-    return node;
+  const hostElement = ctx.$hostElement$;
+  const hostCtx = getContext(hostElement);
+  let contexts = hostCtx.$contexts$;
+  contexts || (hostCtx.$contexts$ = contexts = /* @__PURE__ */ new Map()), contexts.set(context.id, newValue), set(true);
+};
+const useContext = (context, defaultValue) => {
+  const { get, set, ctx } = useSequentialScope();
+  if (void 0 !== get) {
+    return get;
+  }
+  const value = resolveContext(context, ctx.$hostElement$, ctx.$renderCtx$);
+  if (void 0 !== value) {
+    return set(value);
+  }
+  if (void 0 !== defaultValue) {
+    return set(defaultValue);
+  }
+  throw qError(QError_notFoundContext, context.id);
+};
+const resolveContext = (context, hostElement, rctx) => {
+  const contextID = context.id;
+  if (rctx) {
+    const contexts = rctx.$localStack$;
+    for (let i = contexts.length - 1; i >= 0; i--) {
+      const ctx = contexts[i];
+      if (hostElement = ctx.$element$, ctx.$contexts$) {
+        const found = ctx.$contexts$.get(contextID);
+        if (found) {
+          return found;
+        }
+      }
+    }
+  }
+  if (hostElement.closest) {
+    const value = queryContextFromDom(hostElement, contextID);
+    if (void 0 !== value) {
+      return value;
+    }
+  }
+};
+const queryContextFromDom = (hostElement, contextId) => {
+  var _a;
+  let element = hostElement;
+  for (; element; ) {
+    let node = element;
+    let virtual;
+    for (; node && (virtual = findVirtual(node)); ) {
+      const contexts = (_a = tryGetContext(virtual)) == null ? void 0 : _a.$contexts$;
+      if (contexts && contexts.has(contextId)) {
+        return contexts.get(contextId);
+      }
+      node = virtual;
+    }
+    element = element.parentElement;
+  }
+};
+const findVirtual = (el) => {
+  let node = el;
+  let stack = 1;
+  for (; node = node.previousSibling; ) {
+    if (isComment(node)) {
+      if ("/qv" === node.data) {
+        stack++;
+      } else if (node.data.startsWith("qv ") && (stack--, 0 === stack)) {
+        return getVirtualElement(node);
+      }
+    }
+  }
+  return null;
+};
+const ERROR_CONTEXT = createContext$1("qk-error");
+const handleError = (err, hostElement, rctx) => {
+  if (isServer$1()) {
+    throw err;
+  }
+  {
+    const errorStore = resolveContext(ERROR_CONTEXT, hostElement, rctx);
+    if (void 0 === errorStore) {
+      throw err;
+    }
+    errorStore.error = err;
+  }
+};
+const executeComponent = (rctx, elCtx) => {
+  elCtx.$dirty$ = false, elCtx.$mounted$ = true, elCtx.$slots$ = [];
+  const hostElement = elCtx.$element$;
+  const onRenderQRL = elCtx.$renderQrl$;
+  const props = elCtx.$props$;
+  const newCtx = pushRenderContext(rctx, elCtx);
+  const invocatinContext = newInvokeContext(hostElement, void 0, "qRender");
+  const waitOn = invocatinContext.$waitOn$ = [];
+  newCtx.$cmpCtx$ = elCtx, invocatinContext.$subscriber$ = hostElement, invocatinContext.$renderCtx$ = rctx, onRenderQRL.$setContainer$(rctx.$static$.$containerState$.$containerEl$);
+  const onRenderFn = onRenderQRL.getFn(invocatinContext);
+  return safeCall(() => onRenderFn(props), (jsxNode) => (elCtx.$attachedListeners$ = false, waitOn.length > 0 ? Promise.all(waitOn).then(() => elCtx.$dirty$ ? executeComponent(rctx, elCtx) : {
+    node: jsxNode,
+    rctx: newCtx
+  }) : elCtx.$dirty$ ? executeComponent(rctx, elCtx) : {
+    node: jsxNode,
+    rctx: newCtx
+  }), (err) => (handleError(err, hostElement, rctx), {
+    node: SkipRender,
+    rctx: newCtx
+  }));
+};
+const createRenderContext = (doc, containerState) => ({
+  $static$: {
+    $doc$: doc,
+    $containerState$: containerState,
+    $hostElements$: /* @__PURE__ */ new Set(),
+    $operations$: [],
+    $postOperations$: [],
+    $roots$: [],
+    $addSlots$: [],
+    $rmSlots$: []
+  },
+  $cmpCtx$: void 0,
+  $localStack$: []
+});
+const pushRenderContext = (ctx, elCtx) => ({
+  $static$: ctx.$static$,
+  $cmpCtx$: ctx.$cmpCtx$,
+  $localStack$: ctx.$localStack$.concat(elCtx)
+});
+const serializeClass = (obj) => {
+  if (isString(obj)) {
+    return obj;
+  }
+  if (isObject(obj)) {
+    if (isArray(obj)) {
+      return obj.join(" ");
+    }
+    {
+      let buffer = "";
+      let previous = false;
+      for (const key of Object.keys(obj)) {
+        obj[key] && (previous && (buffer += " "), buffer += key, previous = true);
+      }
+      return buffer;
+    }
+  }
+  return "";
+};
+const parseClassListRegex = /\s/;
+const parseClassList = (value) => value ? value.split(parseClassListRegex) : EMPTY_ARRAY$1;
+const stringifyStyle = (obj) => {
+  if (null == obj) {
+    return "";
+  }
+  if ("object" == typeof obj) {
+    if (isArray(obj)) {
+      throw qError(QError_stringifyClassOrStyle, obj, "style");
+    }
+    {
+      const chunks = [];
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          const value = obj[key];
+          value && chunks.push(fromCamelToKebabCase(key) + ":" + value);
+        }
+      }
+      return chunks.join(";");
+    }
+  }
+  return String(obj);
+};
+const getNextIndex = (ctx) => intToStr(ctx.$static$.$containerState$.$elementIndex$++);
+const setQId = (rctx, ctx) => {
+  const id = getNextIndex(rctx);
+  ctx.$id$ = id, ctx.$element$.setAttribute("q:id", id);
+};
+const SKIPS_PROPS = [QSlot, "q:renderFn", "children"];
+const serializeSStyle = (scopeIds) => {
+  const value = scopeIds.join(" ");
+  if (value.length > 0) {
+    return value;
   }
 };
 const renderComponent = (rctx, ctx, flags) => {
   const justMounted = !ctx.$mounted$;
-  return then(executeComponent(rctx, ctx), (res) => {
-    if (res) {
-      const hostElement = ctx.$element$;
-      const newCtx = res.rctx;
-      const invocatinContext = newInvokeContext(rctx.$static$.$doc$, hostElement);
-      invocatinContext.$subscriber$ = hostElement;
-      invocatinContext.$renderCtx$ = newCtx;
-      if (justMounted) {
-        if (ctx.$appendStyles$) {
-          for (const style of ctx.$appendStyles$) {
-            appendHeadStyle(rctx.$static$, style);
-          }
-        }
-        if (ctx.$scopeIds$) {
-          const value = serializeSStyle(ctx.$scopeIds$);
-          if (value) {
-            hostElement.setAttribute(QScopedStyle, value);
-          }
+  const hostElement = ctx.$element$;
+  const containerState = rctx.$static$.$containerState$;
+  return containerState.$hostsStaging$.delete(hostElement), containerState.$subsManager$.$clearSub$(hostElement), then(executeComponent(rctx, ctx), (res) => {
+    const staticCtx = rctx.$static$;
+    const newCtx = res.rctx;
+    const invocatinContext = newInvokeContext(hostElement);
+    if (staticCtx.$hostElements$.add(hostElement), invocatinContext.$subscriber$ = hostElement, invocatinContext.$renderCtx$ = newCtx, justMounted) {
+      if (ctx.$appendStyles$) {
+        for (const style of ctx.$appendStyles$) {
+          appendHeadStyle(staticCtx, style);
         }
       }
-      const processedJSXNode = processData$1(res.node, invocatinContext);
-      return then(processedJSXNode, (processedJSXNode2) => {
-        const newVdom = wrapJSX(hostElement, processedJSXNode2);
-        const oldVdom = getVdom(ctx);
-        ctx.$vdom$ = newVdom;
-        return visitJsxNode(newCtx, oldVdom, newVdom, flags);
-      });
+      if (ctx.$scopeIds$) {
+        const value = serializeSStyle(ctx.$scopeIds$);
+        value && hostElement.setAttribute("q:sstyle", value);
+      }
     }
+    const processedJSXNode = processData$1(res.node, invocatinContext);
+    return then(processedJSXNode, (processedJSXNode2) => {
+      const newVdom = wrapJSX(hostElement, processedJSXNode2);
+      const oldVdom = getVdom(ctx);
+      return then(visitJsxNode(newCtx, oldVdom, newVdom, flags), () => {
+        ctx.$vdom$ = newVdom;
+      });
+    });
   });
 };
-const getVdom = (ctx) => {
-  if (!ctx.$vdom$) {
-    ctx.$vdom$ = domToVnode(ctx.$element$);
-  }
-  return ctx.$vdom$;
-};
+const getVdom = (ctx) => (ctx.$vdom$ || (ctx.$vdom$ = domToVnode(ctx.$element$)), ctx.$vdom$);
 class ProcessedJSXNodeImpl {
   constructor($type$, $props$, $children$, $key$) {
-    this.$type$ = $type$;
-    this.$props$ = $props$;
-    this.$children$ = $children$;
-    this.$key$ = $key$;
-    this.$elm$ = null;
-    this.$text$ = "";
-    seal(this);
+    this.$type$ = $type$, this.$props$ = $props$, this.$children$ = $children$, this.$key$ = $key$, this.$elm$ = null, this.$text$ = "";
   }
 }
-const processNode = (node, invocationContext) => {
-  const key = node.key != null ? String(node.key) : null;
-  const nodeType = node.type;
-  const props = node.props;
-  const originalChildren = props.children;
-  let textType = "";
-  if (isString(nodeType)) {
-    textType = nodeType;
-  } else if (nodeType === Virtual) {
-    textType = VIRTUAL;
-  } else if (isFunction(nodeType)) {
-    const res = invocationContext ? invoke(invocationContext, () => nodeType(props, node.key)) : nodeType(props, node.key);
-    return processData$1(res, invocationContext);
-  } else {
-    throw qError(QError_invalidJsxNodeType, nodeType);
-  }
-  let children = EMPTY_ARRAY$1;
-  if (originalChildren != null) {
-    return then(processData$1(originalChildren, invocationContext), (result) => {
-      if (result !== void 0) {
-        children = isArray(result) ? result : [result];
-      }
-      return new ProcessedJSXNodeImpl(textType, props, children, key);
-    });
-  } else {
-    return new ProcessedJSXNodeImpl(textType, props, children, key);
-  }
-};
 const wrapJSX = (element, input) => {
-  const children = input === void 0 ? EMPTY_ARRAY$1 : isArray(input) ? input : [input];
+  const children = void 0 === input ? EMPTY_ARRAY$1 : isArray(input) ? input : [input];
   const node = new ProcessedJSXNodeImpl(":virtual", {}, children, null);
-  node.$elm$ = element;
-  return node;
+  return node.$elm$ = element, node;
 };
 const processData$1 = (node, invocationContext) => {
-  if (node == null || typeof node === "boolean") {
-    return void 0;
-  }
-  if (isString(node) || typeof node === "number") {
-    const newNode = new ProcessedJSXNodeImpl("#text", EMPTY_OBJ$1, EMPTY_ARRAY$1, null);
-    newNode.$text$ = String(node);
-    return newNode;
-  } else if (isJSXNode(node)) {
-    return processNode(node, invocationContext);
-  } else if (isArray(node)) {
-    const output = promiseAll(node.flatMap((n) => processData$1(n, invocationContext)));
-    return then(output, (array) => array.flat(100).filter(isNotNullable));
-  } else if (isPromise(node)) {
-    return node.then((node2) => processData$1(node2, invocationContext));
-  } else if (node === SkipRender) {
-    return new ProcessedJSXNodeImpl(SKIP_RENDER_TYPE, EMPTY_OBJ$1, EMPTY_ARRAY$1, null);
-  } else {
-    logWarn("A unsupported value was passed to the JSX, skipping render. Value:", node);
-    return void 0;
+  if (null != node && "boolean" != typeof node) {
+    if (isString(node) || "number" == typeof node) {
+      const newNode = new ProcessedJSXNodeImpl("#text", EMPTY_OBJ$1, EMPTY_ARRAY$1, null);
+      return newNode.$text$ = String(node), newNode;
+    }
+    if (isJSXNode(node)) {
+      return ((node2, invocationContext2) => {
+        const key = null != node2.key ? String(node2.key) : null;
+        const nodeType = node2.type;
+        const props = node2.props;
+        const originalChildren = props.children;
+        let textType = "";
+        if (isString(nodeType)) {
+          textType = nodeType;
+        } else {
+          if (nodeType !== Virtual) {
+            if (isFunction(nodeType)) {
+              const res = invoke(invocationContext2, nodeType, props, node2.key);
+              return processData$1(res, invocationContext2);
+            }
+            throw qError(QError_invalidJsxNodeType, nodeType);
+          }
+          textType = ":virtual";
+        }
+        let children = EMPTY_ARRAY$1;
+        return null != originalChildren ? then(processData$1(originalChildren, invocationContext2), (result) => (void 0 !== result && (children = isArray(result) ? result : [result]), new ProcessedJSXNodeImpl(textType, props, children, key))) : new ProcessedJSXNodeImpl(textType, props, children, key);
+      })(node, invocationContext);
+    }
+    if (isArray(node)) {
+      const output = promiseAll(node.flatMap((n) => processData$1(n, invocationContext)));
+      return then(output, (array) => array.flat(100).filter(isNotNullable));
+    }
+    return isPromise(node) ? node.then((node2) => processData$1(node2, invocationContext)) : node === SkipRender ? new ProcessedJSXNodeImpl(":skipRender", EMPTY_OBJ$1, EMPTY_ARRAY$1, null) : void logWarn("A unsupported value was passed to the JSX, skipping render. Value:", node);
   }
 };
 const SVG_NS = "http://www.w3.org/2000/svg";
-const IS_SVG = 1 << 0;
-const IS_HEAD$1 = 1 << 1;
 const CHILDREN_PLACEHOLDER = [];
-const visitJsxNode = (ctx, oldVnode, newVnode, flags) => {
-  return smartUpdateChildren(ctx, oldVnode, newVnode, "root", flags);
-};
+const visitJsxNode = (ctx, oldVnode, newVnode, flags) => smartUpdateChildren(ctx, oldVnode, newVnode, "root", flags);
 const smartUpdateChildren = (ctx, oldVnode, newVnode, mode, flags) => {
-  assertQwikElement(oldVnode.$elm$);
+  oldVnode.$elm$;
   const ch = newVnode.$children$;
-  if (ch.length === 1 && ch[0].$type$ === SKIP_RENDER_TYPE) {
+  if (1 === ch.length && ":skipRender" === ch[0].$type$) {
     return;
   }
   const elm = oldVnode.$elm$;
-  const needsDOMRead = oldVnode.$children$ === CHILDREN_PLACEHOLDER;
-  if (needsDOMRead) {
-    const isHead = elm.nodeName === "HEAD";
-    if (isHead) {
-      mode = "head";
-      flags |= IS_HEAD$1;
-    }
-  }
+  oldVnode.$children$ === CHILDREN_PLACEHOLDER && "HEAD" === elm.nodeName && (mode = "head", flags |= 2);
   const oldCh = getVnodeChildren(oldVnode, mode);
-  if (oldCh.length > 0 && ch.length > 0) {
-    return updateChildren(ctx, elm, oldCh, ch, flags);
-  } else if (ch.length > 0) {
-    return addVnodes(ctx, elm, null, ch, 0, ch.length - 1, flags);
-  } else if (oldCh.length > 0) {
-    return removeVnodes(ctx.$static$, oldCh, 0, oldCh.length - 1);
-  }
+  return oldCh.length > 0 && ch.length > 0 ? updateChildren(ctx, elm, oldCh, ch, flags) : ch.length > 0 ? addVnodes(ctx, elm, null, ch, 0, ch.length - 1, flags) : oldCh.length > 0 ? removeVnodes(ctx.$static$, oldCh, 0, oldCh.length - 1) : void 0;
 };
 const getVnodeChildren = (vnode, mode) => {
   const oldCh = vnode.$children$;
   const elm = vnode.$elm$;
-  if (oldCh === CHILDREN_PLACEHOLDER) {
-    return vnode.$children$ = getChildrenVnodes(elm, mode);
-  }
-  return oldCh;
+  return oldCh === CHILDREN_PLACEHOLDER ? vnode.$children$ = getChildrenVnodes(elm, mode) : oldCh;
 };
 const updateChildren = (ctx, parentElm, oldCh, newCh, flags) => {
   let oldStartIdx = 0;
@@ -1217,88 +793,54 @@ const updateChildren = (ctx, parentElm, oldCh, newCh, flags) => {
   let elmToMove;
   const results = [];
   const staticCtx = ctx.$static$;
-  while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-    if (oldStartVnode == null) {
+  for (; oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx; ) {
+    if (null == oldStartVnode) {
       oldStartVnode = oldCh[++oldStartIdx];
-    } else if (oldEndVnode == null) {
+    } else if (null == oldEndVnode) {
       oldEndVnode = oldCh[--oldEndIdx];
-    } else if (newStartVnode == null) {
+    } else if (null == newStartVnode) {
       newStartVnode = newCh[++newStartIdx];
-    } else if (newEndVnode == null) {
+    } else if (null == newEndVnode) {
       newEndVnode = newCh[--newEndIdx];
     } else if (sameVnode(oldStartVnode, newStartVnode)) {
-      results.push(patchVnode(ctx, oldStartVnode, newStartVnode, flags));
-      oldStartVnode = oldCh[++oldStartIdx];
-      newStartVnode = newCh[++newStartIdx];
+      results.push(patchVnode(ctx, oldStartVnode, newStartVnode, flags)), oldStartVnode = oldCh[++oldStartIdx], newStartVnode = newCh[++newStartIdx];
     } else if (sameVnode(oldEndVnode, newEndVnode)) {
-      results.push(patchVnode(ctx, oldEndVnode, newEndVnode, flags));
-      oldEndVnode = oldCh[--oldEndIdx];
-      newEndVnode = newCh[--newEndIdx];
+      results.push(patchVnode(ctx, oldEndVnode, newEndVnode, flags)), oldEndVnode = oldCh[--oldEndIdx], newEndVnode = newCh[--newEndIdx];
     } else if (sameVnode(oldStartVnode, newEndVnode)) {
-      assertDefined(oldStartVnode.$elm$, "oldStartVnode $elm$ must be defined");
-      assertDefined(oldEndVnode.$elm$, "oldEndVnode $elm$ must be defined");
-      results.push(patchVnode(ctx, oldStartVnode, newEndVnode, flags));
-      insertBefore(staticCtx, parentElm, oldStartVnode.$elm$, oldEndVnode.$elm$.nextSibling);
-      oldStartVnode = oldCh[++oldStartIdx];
-      newEndVnode = newCh[--newEndIdx];
+      oldStartVnode.$elm$, oldEndVnode.$elm$, results.push(patchVnode(ctx, oldStartVnode, newEndVnode, flags)), insertBefore(staticCtx, parentElm, oldStartVnode.$elm$, oldEndVnode.$elm$.nextSibling), oldStartVnode = oldCh[++oldStartIdx], newEndVnode = newCh[--newEndIdx];
     } else if (sameVnode(oldEndVnode, newStartVnode)) {
-      assertDefined(oldStartVnode.$elm$, "oldStartVnode $elm$ must be defined");
-      assertDefined(oldEndVnode.$elm$, "oldEndVnode $elm$ must be defined");
-      results.push(patchVnode(ctx, oldEndVnode, newStartVnode, flags));
-      insertBefore(staticCtx, parentElm, oldEndVnode.$elm$, oldStartVnode.$elm$);
-      oldEndVnode = oldCh[--oldEndIdx];
-      newStartVnode = newCh[++newStartIdx];
+      oldStartVnode.$elm$, oldEndVnode.$elm$, results.push(patchVnode(ctx, oldEndVnode, newStartVnode, flags)), insertBefore(staticCtx, parentElm, oldEndVnode.$elm$, oldStartVnode.$elm$), oldEndVnode = oldCh[--oldEndIdx], newStartVnode = newCh[++newStartIdx];
     } else {
-      if (oldKeyToIdx === void 0) {
-        oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx);
-      }
-      idxInOld = oldKeyToIdx[newStartVnode.$key$];
-      if (idxInOld === void 0) {
+      if (void 0 === oldKeyToIdx && (oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx)), idxInOld = oldKeyToIdx[newStartVnode.$key$], void 0 === idxInOld) {
         const newElm = createElm(ctx, newStartVnode, flags);
         results.push(then(newElm, (newElm2) => {
           insertBefore(staticCtx, parentElm, newElm2, oldStartVnode.$elm$);
         }));
+      } else if (elmToMove = oldCh[idxInOld], isTagName(elmToMove, newStartVnode.$type$)) {
+        results.push(patchVnode(ctx, elmToMove, newStartVnode, flags)), oldCh[idxInOld] = void 0, elmToMove.$elm$, insertBefore(staticCtx, parentElm, elmToMove.$elm$, oldStartVnode.$elm$);
       } else {
-        elmToMove = oldCh[idxInOld];
-        if (!isTagName(elmToMove, newStartVnode.$type$)) {
-          const newElm = createElm(ctx, newStartVnode, flags);
-          results.push(then(newElm, (newElm2) => {
-            insertBefore(staticCtx, parentElm, newElm2, oldStartVnode.$elm$);
-          }));
-        } else {
-          results.push(patchVnode(ctx, elmToMove, newStartVnode, flags));
-          oldCh[idxInOld] = void 0;
-          assertDefined(elmToMove.$elm$, "elmToMove $elm$ must be defined");
-          insertBefore(staticCtx, parentElm, elmToMove.$elm$, oldStartVnode.$elm$);
-        }
+        const newElm = createElm(ctx, newStartVnode, flags);
+        results.push(then(newElm, (newElm2) => {
+          insertBefore(staticCtx, parentElm, newElm2, oldStartVnode.$elm$);
+        }));
       }
       newStartVnode = newCh[++newStartIdx];
     }
   }
   if (newStartIdx <= newEndIdx) {
-    const before = newCh[newEndIdx + 1] == null ? null : newCh[newEndIdx + 1].$elm$;
+    const before = null == newCh[newEndIdx + 1] ? null : newCh[newEndIdx + 1].$elm$;
     results.push(addVnodes(ctx, parentElm, before, newCh, newStartIdx, newEndIdx, flags));
   }
   let wait = promiseAll(results);
-  if (oldStartIdx <= oldEndIdx) {
-    wait = then(wait, () => {
-      removeVnodes(staticCtx, oldCh, oldStartIdx, oldEndIdx);
-    });
-  }
-  return wait;
+  return oldStartIdx <= oldEndIdx && (wait = then(wait, () => {
+    removeVnodes(staticCtx, oldCh, oldStartIdx, oldEndIdx);
+  })), wait;
 };
 const getCh = (elm, filter) => {
   const end = isVirtualElement(elm) ? elm.close : null;
   const nodes = [];
   let node = elm.firstChild;
-  while (node = processVirtualNodes(node)) {
-    if (filter(node)) {
-      nodes.push(node);
-    }
-    node = node.nextSibling;
-    if (node === end) {
-      break;
-    }
+  for (; (node = processVirtualNodes(node)) && (filter(node) && nodes.push(node), node = node.nextSibling, node !== end); ) {
   }
   return nodes;
 };
@@ -1312,20 +854,20 @@ const getChildren = (elm, mode) => {
       return getCh(elm, isQwikElement);
   }
 };
-const getChildrenVnodes = (elm, mode) => {
-  return getChildren(elm, mode).map(domToVnode);
+const getChildrenVnodes = (elm, mode) => getChildren(elm, mode).map(getVnodeFromEl);
+const getVnodeFromEl = (el) => {
+  var _a, _b;
+  return isElement(el) ? (_b = (_a = tryGetContext(el)) == null ? void 0 : _a.$vdom$) != null ? _b : domToVnode(el) : domToVnode(el);
 };
 const domToVnode = (node) => {
   if (isQwikElement(node)) {
     const props = isVirtualElement(node) ? EMPTY_OBJ$1 : getProps(node);
     const t = new ProcessedJSXNodeImpl(node.localName, props, CHILDREN_PLACEHOLDER, getKey(node));
-    t.$elm$ = node;
-    return t;
-  } else if (isText(node)) {
+    return t.$elm$ = node, t;
+  }
+  if (3 === node.nodeType) {
     const t = new ProcessedJSXNodeImpl(node.nodeName, {}, CHILDREN_PLACEHOLDER, null);
-    t.$text$ = node.data;
-    t.$elm$ = node;
-    return t;
+    return t.$text$ = node.data, t.$elm$ = node, t;
   }
   throw new Error("invalid node");
 };
@@ -1334,159 +876,106 @@ const getProps = (node) => {
   const attributes = node.attributes;
   const len = attributes.length;
   for (let i = 0; i < len; i++) {
-    const a = attributes.item(i);
-    assertDefined(a, "attribute must be defined");
-    const name = a.name;
-    if (!name.includes(":")) {
-      props[name] = name === "class" ? parseClassAny(a.value).filter((c) => !c.startsWith(ComponentStylesPrefixContent)) : a.value;
-    }
+    const attr = attributes.item(i);
+    const name = attr.name;
+    name.includes(":") || (props[name] = "class" === name ? parseDomClass(attr.value) : attr.value);
   }
   return props;
 };
+const parseDomClass = (value) => parseClassList(value).filter((c) => !c.startsWith("\u2B50\uFE0F")).join(" ");
 const isHeadChildren = (node) => {
   const type = node.nodeType;
-  if (type === 1) {
-    return node.hasAttribute("q:head");
-  }
-  return type === 111;
+  return 1 === type ? node.hasAttribute("q:head") : 111 === type;
 };
-const isSlotTemplate = (node) => {
-  return node.nodeName === "Q:TEMPLATE";
-};
+const isSlotTemplate = (node) => "Q:TEMPLATE" === node.nodeName;
 const isChildComponent = (node) => {
   const type = node.nodeType;
-  if (type === 3 || type === 111) {
+  if (3 === type || 111 === type) {
     return true;
   }
-  if (type !== 1) {
+  if (1 !== type) {
     return false;
   }
   const nodeName = node.nodeName;
-  if (nodeName === "Q:TEMPLATE") {
-    return false;
-  }
-  if (nodeName === "HEAD") {
-    return node.hasAttribute("q:head");
-  }
-  return true;
-};
-const splitChildren = (input) => {
-  var _a;
-  const output = {};
-  for (const item of input) {
-    const key = getSlotName(item);
-    const node = (_a = output[key]) != null ? _a : output[key] = new ProcessedJSXNodeImpl(VIRTUAL, {
-      [QSlotS]: ""
-    }, [], key);
-    node.$children$.push(item);
-  }
-  return output;
+  return "Q:TEMPLATE" !== nodeName && ("HEAD" !== nodeName || node.hasAttribute("q:head"));
 };
 const patchVnode = (rctx, oldVnode, newVnode, flags) => {
-  assertEqual(oldVnode.$type$, newVnode.$type$, "old and new vnodes type must be the same");
+  oldVnode.$type$, newVnode.$type$;
   const elm = oldVnode.$elm$;
   const tag = newVnode.$type$;
   const staticCtx = rctx.$static$;
-  const isVirtual = tag === VIRTUAL;
-  newVnode.$elm$ = elm;
-  if (tag === "#text") {
-    if (oldVnode.$text$ !== newVnode.$text$) {
-      setProperty$1(staticCtx, elm, "data", newVnode.$text$);
-    }
-    return;
+  const isVirtual = ":virtual" === tag;
+  if (newVnode.$elm$ = elm, "#text" === tag) {
+    return void (oldVnode.$text$ !== newVnode.$text$ && setProperty(staticCtx, elm, "data", newVnode.$text$));
   }
-  assertQwikElement(elm);
-  let isSvg = !!(flags & IS_SVG);
-  if (!isSvg && tag === "svg") {
-    flags |= IS_SVG;
-    isSvg = true;
-  }
+  let isSvg = !!(1 & flags);
+  isSvg || "svg" !== tag || (flags |= 1, isSvg = true);
   const props = newVnode.$props$;
-  const isComponent = isVirtual && OnRenderProp in props;
+  const isComponent = isVirtual && "q:renderFn" in props;
   const elCtx = getContext(elm);
   if (!isComponent) {
-    const listenerMap = updateProperties$1(elCtx, staticCtx, oldVnode.$props$, props, isSvg);
+    const listenerMap = updateProperties(elCtx, staticCtx, oldVnode.$props$, props, isSvg);
     const currentComponent = rctx.$cmpCtx$;
     if (currentComponent && !currentComponent.$attachedListeners$) {
       currentComponent.$attachedListeners$ = true;
-      Object.entries(currentComponent.li).forEach(([key, value]) => {
-        addQRLListener(listenerMap, key, value);
-        addGlobalListener(staticCtx, elm, key);
-      });
-    }
-    if (qSerialize) {
-      Object.entries(listenerMap).forEach(([key, value]) => setAttribute(staticCtx, elm, key, serializeQRLs(value, elCtx)));
-    }
-    if (isSvg && newVnode.$type$ === "foreignObject") {
-      flags &= ~IS_SVG;
-      isSvg = false;
-    }
-    const isSlot = isVirtual && QSlotS in props;
-    if (isSlot) {
-      const currentComponent2 = rctx.$cmpCtx$;
-      assertDefined(currentComponent2, "slots can not be rendered outside a component");
-      assertDefined(currentComponent2.$slots$, "current component slots must be a defined array");
-      currentComponent2.$slots$.push(newVnode);
-      return;
-    }
-    const setsInnerHTML = props[dangerouslySetInnerHTML] !== void 0;
-    if (setsInnerHTML) {
-      if (qDev$1 && newVnode.$children$.length > 0) {
-        logWarn("Node can not have children when innerHTML is set");
+      for (const key of Object.keys(currentComponent.li)) {
+        addQRLListener(listenerMap, key, currentComponent.li[key]), addGlobalListener(staticCtx, elm, key);
       }
+    }
+    for (const key of Object.keys(listenerMap)) {
+      setAttribute(staticCtx, elm, key, serializeQRLs(listenerMap[key], elCtx));
+    }
+    if (isSvg && "foreignObject" === newVnode.$type$ && (flags &= -2, isSvg = false), isVirtual && "q:s" in props) {
+      const currentComponent2 = rctx.$cmpCtx$;
+      return currentComponent2.$slots$, void currentComponent2.$slots$.push(newVnode);
+    }
+    if (void 0 !== props[dangerouslySetInnerHTML]) {
       return;
     }
-    const isRenderOnce = isVirtual && QOnce in props;
-    if (isRenderOnce) {
+    if (isVirtual && "qonce" in props) {
       return;
     }
     return smartUpdateChildren(rctx, oldVnode, newVnode, "root", flags);
   }
-  let needsRender = setComponentProps(elCtx, rctx, props);
-  if (!needsRender && !elCtx.$renderQrl$ && !elCtx.$element$.hasAttribute(ELEMENT_ID)) {
-    setQId(rctx, elCtx);
-    elCtx.$renderQrl$ = props[OnRenderProp];
-    assertQrl(elCtx.$renderQrl$);
-    needsRender = true;
-  }
-  if (needsRender) {
-    return then(renderComponent(rctx, elCtx, flags), () => renderContentProjection(rctx, elCtx, newVnode, flags));
-  }
-  return renderContentProjection(rctx, elCtx, newVnode, flags);
+  let needsRender = setComponentProps$1(elCtx, rctx, props);
+  return needsRender || elCtx.$renderQrl$ || elCtx.$element$.hasAttribute("q:id") || (setQId(rctx, elCtx), elCtx.$renderQrl$ = props["q:renderFn"], elCtx.$renderQrl$, needsRender = true), needsRender ? then(renderComponent(rctx, elCtx, flags), () => renderContentProjection(rctx, elCtx, newVnode, flags)) : renderContentProjection(rctx, elCtx, newVnode, flags);
 };
 const renderContentProjection = (rctx, hostCtx, vnode, flags) => {
   const newChildren = vnode.$children$;
   const staticCtx = rctx.$static$;
-  const splittedNewChidren = splitChildren(newChildren);
+  const splittedNewChidren = ((input) => {
+    var _a;
+    const output = {};
+    for (const item of input) {
+      const key = getSlotName(item);
+      ((_a = output[key]) != null ? _a : output[key] = new ProcessedJSXNodeImpl(":virtual", {
+        "q:s": ""
+      }, [], key)).$children$.push(item);
+    }
+    return output;
+  })(newChildren);
   const slotRctx = pushRenderContext(rctx, hostCtx);
   const slotMaps = getSlotMap(hostCtx);
-  Object.entries(slotMaps.slots).forEach(([key, slotEl]) => {
+  for (const key of Object.keys(slotMaps.slots)) {
     if (!splittedNewChidren[key]) {
+      const slotEl = slotMaps.slots[key];
       const oldCh = getChildrenVnodes(slotEl, "root");
       if (oldCh.length > 0) {
         const slotCtx = tryGetContext(slotEl);
-        if (slotCtx && slotCtx.$vdom$) {
-          slotCtx.$vdom$.$children$ = [];
-        }
-        removeVnodes(staticCtx, oldCh, 0, oldCh.length - 1);
+        slotCtx && slotCtx.$vdom$ && (slotCtx.$vdom$.$children$ = []), removeVnodes(staticCtx, oldCh, 0, oldCh.length - 1);
       }
     }
-  });
-  Object.entries(slotMaps.templates).forEach(([key, templateEl]) => {
-    if (templateEl) {
-      if (!splittedNewChidren[key] || slotMaps.slots[key]) {
-        removeNode(staticCtx, templateEl);
-        slotMaps.templates[key] = void 0;
-      }
-    }
-  });
-  return promiseAll(Object.entries(splittedNewChidren).map(([key, newVdom]) => {
+  }
+  for (const key of Object.keys(slotMaps.templates)) {
+    const templateEl = slotMaps.templates[key];
+    templateEl && (splittedNewChidren[key] && !slotMaps.slots[key] || (removeNode(staticCtx, templateEl), slotMaps.templates[key] = void 0));
+  }
+  return promiseAll(Object.keys(splittedNewChidren).map((key) => {
+    const newVdom = splittedNewChidren[key];
     const slotElm = getSlotElement(staticCtx, slotMaps, hostCtx.$element$, key);
     const slotCtx = getContext(slotElm);
     const oldVdom = getVdom(slotCtx);
-    slotCtx.$vdom$ = newVdom;
-    newVdom.$elm$ = slotElm;
-    return smartUpdateChildren(slotRctx, oldVdom, newVdom, "root", flags);
+    return slotCtx.$vdom$ = newVdom, newVdom.$elm$ = slotElm, smartUpdateChildren(slotRctx, oldVdom, newVdom, "root", flags);
   }));
 };
 const addVnodes = (ctx, parentElm, before, vnodes, startIdx, endIdx, flags) => {
@@ -1494,18 +983,13 @@ const addVnodes = (ctx, parentElm, before, vnodes, startIdx, endIdx, flags) => {
   let hasPromise = false;
   for (; startIdx <= endIdx; ++startIdx) {
     const ch = vnodes[startIdx];
-    assertDefined(ch, "render: node must be defined at index", startIdx, vnodes);
     const elm = createElm(ctx, ch, flags);
-    promises.push(elm);
-    if (isPromise(elm)) {
-      hasPromise = true;
-    }
+    promises.push(elm), isPromise(elm) && (hasPromise = true);
   }
   if (hasPromise) {
     return Promise.all(promises).then((children) => insertChildren(ctx.$static$, parentElm, children, before));
-  } else {
-    insertChildren(ctx.$static$, parentElm, promises, before);
   }
+  insertChildren(ctx.$static$, parentElm, promises, before);
 };
 const insertChildren = (ctx, parentElm, children, before) => {
   for (const child of children) {
@@ -1515,10 +999,7 @@ const insertChildren = (ctx, parentElm, children, before) => {
 const removeVnodes = (ctx, nodes, startIdx, endIdx) => {
   for (; startIdx <= endIdx; ++startIdx) {
     const ch = nodes[startIdx];
-    if (ch) {
-      assertDefined(ch.$elm$, "vnode elm must be defined");
-      removeNode(ctx, ch.$elm$);
-    }
+    ch && (ch.$elm$, removeNode(ctx, ch.$elm$));
   }
 };
 const getSlotElement = (ctx, slotMaps, parentEl, slotName) => {
@@ -1531,9 +1012,12 @@ const getSlotElement = (ctx, slotMaps, parentEl, slotName) => {
     return templateEl;
   }
   const template = createTemplate(ctx.$doc$, slotName);
-  prepend(ctx, parentEl, template);
-  slotMaps.templates[slotName] = template;
-  return template;
+  return ((ctx2, parent, newChild) => {
+    ctx2.$operations$.push({
+      $operation$: directInsertBefore,
+      $args$: [parent, newChild, parent.firstChild]
+    });
+  })(ctx, parentEl, template), slotMaps.templates[slotName] = template, template;
 };
 const getSlotName = (node) => {
   var _a;
@@ -1542,212 +1026,150 @@ const getSlotName = (node) => {
 const createElm = (rctx, vnode, flags) => {
   const tag = vnode.$type$;
   const doc = rctx.$static$.$doc$;
-  if (tag === "#text") {
-    return vnode.$elm$ = createTextNode(doc, vnode.$text$);
+  if ("#text" === tag) {
+    return vnode.$elm$ = ((doc2, text) => doc2.createTextNode(text))(doc, vnode.$text$);
   }
   let elm;
-  let isHead = !!(flags & IS_HEAD$1);
-  let isSvg = !!(flags & IS_SVG);
-  if (!isSvg && tag === "svg") {
-    flags |= IS_SVG;
-    isSvg = true;
-  }
-  const isVirtual = tag === VIRTUAL;
+  let isHead = !!(2 & flags);
+  let isSvg = !!(1 & flags);
+  isSvg || "svg" !== tag || (flags |= 1, isSvg = true);
+  const isVirtual = ":virtual" === tag;
   const props = vnode.$props$;
-  const isComponent = OnRenderProp in props;
+  const isComponent = "q:renderFn" in props;
   const staticCtx = rctx.$static$;
-  if (isVirtual) {
-    elm = newVirtualElement(doc);
-  } else if (tag === "head") {
-    elm = doc.head;
-    flags |= IS_HEAD$1;
-    isHead = true;
-  } else {
-    elm = createElement(doc, tag, isSvg);
-    flags &= ~IS_HEAD$1;
-  }
-  vnode.$elm$ = elm;
-  if (isSvg && tag === "foreignObject") {
-    isSvg = false;
-    flags &= ~IS_SVG;
-  }
+  isVirtual ? elm = ((doc2) => {
+    const open = doc2.createComment("qv ");
+    const close = doc2.createComment("/qv");
+    return new VirtualElementImpl(open, close);
+  })(doc) : "head" === tag ? (elm = doc.head, flags |= 2, isHead = true) : (elm = createElement(doc, tag, isSvg), flags &= -3), vnode.$elm$ = elm, isSvg && "foreignObject" === tag && (isSvg = false, flags &= -2);
   const elCtx = getContext(elm);
   if (isComponent) {
     setKey(elm, vnode.$key$);
-    assertTrue(isVirtual, "component must be a virtual element");
-    const renderQRL = props[OnRenderProp];
-    assertQrl(renderQRL);
-    setComponentProps(elCtx, rctx, props);
-    setQId(rctx, elCtx);
-    elCtx.$renderQrl$ = renderQRL;
-    return then(renderComponent(rctx, elCtx, flags), () => {
+    const renderQRL = props["q:renderFn"];
+    return setComponentProps$1(elCtx, rctx, props), setQId(rctx, elCtx), elCtx.$renderQrl$ = renderQRL, then(renderComponent(rctx, elCtx, flags), () => {
       let children2 = vnode.$children$;
-      if (children2.length === 0) {
+      if (0 === children2.length) {
         return elm;
       }
-      if (children2.length === 1 && children2[0].$type$ === SKIP_RENDER_TYPE) {
-        children2 = children2[0].$children$;
-      }
+      1 === children2.length && ":skipRender" === children2[0].$type$ && (children2 = children2[0].$children$);
       const slotRctx = pushRenderContext(rctx, elCtx);
       const slotMap = getSlotMap(elCtx);
       const elements = children2.map((ch) => createElm(slotRctx, ch, flags));
       return then(promiseAll(elements), () => {
         for (const node of children2) {
-          assertDefined(node.$elm$, "vnode elm must be defined");
-          appendChild(staticCtx, getSlotElement(staticCtx, slotMap, elm, getSlotName(node)), node.$elm$);
+          node.$elm$, appendChild(staticCtx, getSlotElement(staticCtx, slotMap, elm, getSlotName(node)), node.$elm$);
         }
         return elm;
       });
     });
   }
   const currentComponent = rctx.$cmpCtx$;
-  const isSlot = isVirtual && QSlotS in props;
+  const isSlot = isVirtual && "q:s" in props;
   const hasRef = !isVirtual && "ref" in props;
   const listenerMap = setProperties(staticCtx, elCtx, props, isSvg);
   if (currentComponent && !isVirtual) {
     const scopedIds = currentComponent.$scopeIds$;
-    if (scopedIds) {
-      scopedIds.forEach((styleId) => {
-        elm.classList.add(styleId);
-      });
-    }
-    if (!currentComponent.$attachedListeners$) {
+    if (scopedIds && scopedIds.forEach((styleId) => {
+      elm.classList.add(styleId);
+    }), !currentComponent.$attachedListeners$) {
       currentComponent.$attachedListeners$ = true;
-      Object.entries(currentComponent.li).forEach(([eventName, qrls]) => {
-        addQRLListener(listenerMap, eventName, qrls);
-      });
+      for (const eventName of Object.keys(currentComponent.li)) {
+        addQRLListener(listenerMap, eventName, currentComponent.li[eventName]);
+      }
     }
   }
-  if (isSlot) {
-    assertDefined(currentComponent, "slot can only be used inside component");
-    assertDefined(currentComponent.$slots$, "current component slots must be a defined array");
-    setKey(elm, vnode.$key$);
-    directSetAttribute(elm, QSlotRef, currentComponent.$id$);
-    currentComponent.$slots$.push(vnode);
-    staticCtx.$addSlots$.push([elm, currentComponent.$element$]);
-  } else if (qSerialize) {
-    setKey(elm, vnode.$key$);
+  isSlot ? (currentComponent.$slots$, setKey(elm, vnode.$key$), directSetAttribute(elm, "q:sref", currentComponent.$id$), currentComponent.$slots$.push(vnode), staticCtx.$addSlots$.push([elm, currentComponent.$element$])) : setKey(elm, vnode.$key$);
+  {
+    const listeners = Object.keys(listenerMap);
+    isHead && !isVirtual && directSetAttribute(elm, "q:head", ""), (listeners.length > 0 || hasRef) && setQId(rctx, elCtx);
+    for (const key of listeners) {
+      setAttribute(staticCtx, elm, key, serializeQRLs(listenerMap[key], elCtx));
+    }
   }
-  if (qSerialize) {
-    const listeners = Object.entries(listenerMap);
-    if (isHead && !isVirtual) {
-      directSetAttribute(elm, "q:head", "");
-    }
-    if (listeners.length > 0 || hasRef) {
-      setQId(rctx, elCtx);
-    }
-    listeners.forEach(([key, qrls]) => {
-      setAttribute(staticCtx, elm, key, serializeQRLs(qrls, elCtx));
-    });
-  }
-  const setsInnerHTML = props[dangerouslySetInnerHTML] !== void 0;
-  if (setsInnerHTML) {
-    if (qDev$1 && vnode.$children$.length > 0) {
-      logWarn("Node can not have children when innerHTML is set");
-    }
+  if (void 0 !== props[dangerouslySetInnerHTML]) {
     return elm;
   }
   let children = vnode.$children$;
-  if (children.length === 0) {
+  if (0 === children.length) {
     return elm;
   }
-  if (children.length === 1 && children[0].$type$ === SKIP_RENDER_TYPE) {
-    children = children[0].$children$;
-  }
+  1 === children.length && ":skipRender" === children[0].$type$ && (children = children[0].$children$);
   const promises = children.map((ch) => createElm(rctx, ch, flags));
   return then(promiseAll(promises), () => {
     for (const node of children) {
-      assertDefined(node.$elm$, "vnode elm must be defined");
-      appendChild(rctx.$static$, elm, node.$elm$);
+      node.$elm$, appendChild(rctx.$static$, elm, node.$elm$);
     }
     return elm;
   });
 };
-const getSlots = (ctx) => {
-  const slots = ctx.$slots$;
-  if (!slots) {
-    const parent = ctx.$element$.parentElement;
-    assertDefined(parent, "component should be already attached to the dom");
-    return ctx.$slots$ = readDOMSlots(ctx);
-  }
-  return slots;
-};
 const getSlotMap = (ctx) => {
   var _a, _b;
-  const slotsArray = getSlots(ctx);
+  const slotsArray = ((ctx2) => ctx2.$slots$ || (ctx2.$element$.parentElement, ctx2.$slots$ = readDOMSlots(ctx2)))(ctx);
   const slots = {};
   const templates = {};
   const t = Array.from(ctx.$element$.childNodes).filter(isSlotTemplate);
   for (const vnode of slotsArray) {
-    assertQwikElement(vnode.$elm$);
-    slots[(_a = vnode.$key$) != null ? _a : ""] = vnode.$elm$;
+    vnode.$elm$, slots[(_a = vnode.$key$) != null ? _a : ""] = vnode.$elm$;
   }
   for (const elm of t) {
     templates[(_b = directGetAttribute(elm, QSlot)) != null ? _b : ""] = elm;
   }
-  return { slots, templates };
+  return {
+    slots,
+    templates
+  };
 };
-const readDOMSlots = (ctx) => {
-  const parent = ctx.$element$.parentElement;
-  assertDefined(parent, "component should be already attached to the dom");
-  return queryAllVirtualByAttribute(parent, QSlotRef, ctx.$id$).map(domToVnode);
-};
-const handleStyle = (ctx, elm, _, newValue) => {
-  setProperty$1(ctx, elm.style, "cssText", stringifyStyle(newValue));
-  return true;
-};
-const handleClass = (ctx, elm, _, newValue, oldValue) => {
-  const oldClasses = parseClassAny(oldValue);
-  const newClasses = parseClassAny(newValue);
-  setClasslist(ctx, elm, oldClasses.filter((c) => c && !newClasses.includes(c)), newClasses.filter((c) => c && !oldClasses.includes(c)));
-  return true;
-};
-const checkBeforeAssign = (ctx, elm, prop, newValue) => {
-  if (prop in elm) {
-    if (elm[prop] !== newValue) {
-      setProperty$1(ctx, elm, prop, newValue);
+const readDOMSlots = (ctx) => ((el, prop, value) => {
+  const walker = ((el2, prop2, value2) => el2.ownerDocument.createTreeWalker(el2, 128, {
+    acceptNode(c) {
+      const virtual = getVirtualElement(c);
+      return virtual && directGetAttribute(virtual, "q:sref") === value2 ? 1 : 2;
     }
+  }))(el, 0, value);
+  const pars = [];
+  let currentNode = null;
+  for (; currentNode = walker.nextNode(); ) {
+    pars.push(getVirtualElement(currentNode));
   }
-  return true;
-};
+  return pars;
+})(ctx.$element$.parentElement, 0, ctx.$id$).map(domToVnode);
+const checkBeforeAssign = (ctx, elm, prop, newValue) => (prop in elm && elm[prop] !== newValue && setProperty(ctx, elm, prop, newValue), true);
 const dangerouslySetInnerHTML = "dangerouslySetInnerHTML";
-const setInnerHTML = (ctx, elm, _, newValue) => {
-  if (dangerouslySetInnerHTML in elm) {
-    setProperty$1(ctx, elm, dangerouslySetInnerHTML, newValue);
-  } else if ("innerHTML" in elm) {
-    setProperty$1(ctx, elm, "innerHTML", newValue);
-  }
-  return true;
-};
-const noop = () => {
-  return true;
-};
 const PROP_HANDLER_MAP = {
-  style: handleStyle,
-  class: handleClass,
-  className: handleClass,
+  style: (ctx, elm, _, newValue) => (setProperty(ctx, elm.style, "cssText", stringifyStyle(newValue)), true),
+  class: (ctx, elm, _, newValue, oldValue) => {
+    const oldClasses = parseClassList(oldValue);
+    const newClasses = parseClassList(newValue);
+    return ((ctx2, elm2, toRemove, toAdd) => {
+      ctx2 ? ctx2.$operations$.push({
+        $operation$: _setClasslist,
+        $args$: [elm2, toRemove, toAdd]
+      }) : _setClasslist(elm2, toRemove, toAdd);
+    })(ctx, elm, oldClasses.filter((c) => c && !newClasses.includes(c)), newClasses.filter((c) => c && !oldClasses.includes(c))), true;
+  },
   value: checkBeforeAssign,
   checked: checkBeforeAssign,
-  [dangerouslySetInnerHTML]: setInnerHTML,
-  innerHTML: noop
+  [dangerouslySetInnerHTML]: (ctx, elm, _, newValue) => (dangerouslySetInnerHTML in elm ? setProperty(ctx, elm, dangerouslySetInnerHTML, newValue) : "innerHTML" in elm && setProperty(ctx, elm, "innerHTML", newValue), true),
+  innerHTML: () => true
 };
-const updateProperties$1 = (elCtx, staticCtx, oldProps, newProps, isSvg) => {
+const updateProperties = (elCtx, staticCtx, oldProps, newProps, isSvg) => {
   const keys = getKeys(oldProps, newProps);
   const listenersMap = elCtx.li = {};
-  if (keys.length === 0) {
+  if (0 === keys.length) {
     return listenersMap;
   }
   const elm = elCtx.$element$;
-  for (const key of keys) {
-    if (key === "children") {
+  for (let key of keys) {
+    if ("children" === key) {
       continue;
     }
-    const newValue = newProps[key];
+    let newValue = newProps[key];
+    "className" === key && (newProps.class = newValue, key = "class"), "class" === key && (newProps.class = newValue = serializeClass(newValue));
     const oldValue = oldProps[key];
     if (oldValue === newValue) {
       continue;
     }
-    if (key === "ref") {
+    if ("ref" === key) {
       newValue.current = elm;
       continue;
     }
@@ -1756,42 +1178,33 @@ const updateProperties$1 = (elCtx, staticCtx, oldProps, newProps, isSvg) => {
       continue;
     }
     const exception = PROP_HANDLER_MAP[key];
-    if (exception) {
-      if (exception(staticCtx, elm, key, newValue, oldValue)) {
-        continue;
-      }
-    }
-    if (!isSvg && key in elm) {
-      setProperty$1(staticCtx, elm, key, newValue);
-      continue;
-    }
-    setAttribute(staticCtx, elm, key, newValue);
+    exception && exception(staticCtx, elm, key, newValue, oldValue) || (isSvg || !(key in elm) ? setAttribute(staticCtx, elm, key, newValue) : setProperty(staticCtx, elm, key, newValue));
   }
   return listenersMap;
 };
 const getKeys = (oldProps, newProps) => {
   const keys = Object.keys(newProps);
-  keys.push(...Object.keys(oldProps).filter((p) => !keys.includes(p)));
-  return keys;
+  return keys.push(...Object.keys(oldProps).filter((p) => !keys.includes(p))), keys;
 };
 const addGlobalListener = (staticCtx, elm, prop) => {
-  if (!qSerialize && prop.includes(":")) {
-    setAttribute(staticCtx, elm, prop, "");
+  try {
+    window.qwikevents && window.qwikevents.push(getEventName(prop));
+  } catch (err) {
   }
 };
 const setProperties = (rctx, elCtx, newProps, isSvg) => {
   const elm = elCtx.$element$;
   const keys = Object.keys(newProps);
   const listenerMap = elCtx.li;
-  if (keys.length === 0) {
+  if (0 === keys.length) {
     return listenerMap;
   }
-  for (const key of keys) {
-    if (key === "children") {
+  for (let key of keys) {
+    if ("children" === key) {
       continue;
     }
-    const newValue = newProps[key];
-    if (key === "ref") {
+    let newValue = newProps[key];
+    if ("className" === key && (newProps.class = newValue, key = "class"), "class" === key && (newProps.class = newValue = serializeClass(newValue)), "ref" === key) {
       newValue.current = elm;
       continue;
     }
@@ -1800,37 +1213,24 @@ const setProperties = (rctx, elCtx, newProps, isSvg) => {
       continue;
     }
     const exception = PROP_HANDLER_MAP[key];
-    if (exception) {
-      if (exception(rctx, elm, key, newValue, void 0)) {
-        continue;
-      }
-    }
-    if (!isSvg && key in elm) {
-      setProperty$1(rctx, elm, key, newValue);
-      continue;
-    }
-    setAttribute(rctx, elm, key, newValue);
+    exception && exception(rctx, elm, key, newValue, void 0) || (isSvg || !(key in elm) ? setAttribute(rctx, elm, key, newValue) : setProperty(rctx, elm, key, newValue));
   }
   return listenerMap;
 };
-const setComponentProps = (ctx, rctx, expectProps) => {
+const setComponentProps$1 = (ctx, rctx, expectProps) => {
   const keys = Object.keys(expectProps);
-  if (keys.length === 0) {
+  if (0 === keys.length) {
     return false;
   }
   const qwikProps = getPropsMutator(ctx, rctx.$static$.$containerState$);
   for (const key of keys) {
-    if (SKIPS_PROPS.includes(key)) {
-      continue;
-    }
-    qwikProps.set(key, expectProps[key]);
+    SKIPS_PROPS.includes(key) || qwikProps.set(key, expectProps[key]);
   }
   return ctx.$dirty$;
 };
 const cleanupTree = (parent, rctx, subsManager, stopSlots) => {
-  if (stopSlots && parent.hasAttribute(QSlotS)) {
-    rctx.$rmSlots$.push(parent);
-    return;
+  if (stopSlots && parent.hasAttribute("q:s")) {
+    return void rctx.$rmSlots$.push(parent);
   }
   cleanupElement(parent, subsManager);
   const ch = getChildren(parent, "elements");
@@ -1840,138 +1240,54 @@ const cleanupTree = (parent, rctx, subsManager, stopSlots) => {
 };
 const cleanupElement = (el, subsManager) => {
   const ctx = tryGetContext(el);
-  if (ctx) {
-    cleanupContext(ctx, subsManager);
-  }
-};
-const executeContextWithSlots = ({ $static$: ctx }) => {
-  executeDOMRender(ctx);
+  ctx && cleanupContext(ctx, subsManager);
 };
 const directAppendChild = (parent, child) => {
-  if (isVirtualElement(child)) {
-    child.appendTo(parent);
-  } else {
-    parent.appendChild(child);
-  }
+  isVirtualElement(child) ? child.appendTo(parent) : parent.appendChild(child);
 };
 const directRemoveChild = (parent, child) => {
-  if (isVirtualElement(child)) {
-    child.remove();
-  } else {
-    parent.removeChild(child);
-  }
+  isVirtualElement(child) ? child.remove() : parent.removeChild(child);
 };
 const directInsertBefore = (parent, child, ref) => {
-  if (isVirtualElement(child)) {
-    child.insertBeforeTo(parent, getRootNode(ref));
-  } else {
-    parent.insertBefore(child, getRootNode(ref));
-  }
+  isVirtualElement(child) ? child.insertBeforeTo(parent, getRootNode(ref)) : parent.insertBefore(child, getRootNode(ref));
 };
 const createKeyToOldIdx = (children, beginIdx, endIdx) => {
   const map = {};
   for (let i = beginIdx; i <= endIdx; ++i) {
-    const child = children[i];
-    const key = child.$key$;
-    if (key != null) {
-      map[key] = i;
-    }
+    const key = children[i].$key$;
+    null != key && (map[key] = i);
   }
   return map;
 };
-const sameVnode = (vnode1, vnode2) => {
-  if (vnode1.$type$ !== vnode2.$type$) {
-    return false;
-  }
-  return vnode1.$key$ === vnode2.$key$;
-};
-const isTagName = (elm, tagName) => {
-  return elm.$type$ === tagName;
-};
+const sameVnode = (vnode1, vnode2) => vnode1.$type$ === vnode2.$type$ && vnode1.$key$ === vnode2.$key$;
+const isTagName = (elm, tagName) => elm.$type$ === tagName;
 const useLexicalScope = () => {
   const context = getInvokeContext();
   let qrl = context.$qrl$;
-  if (!qrl) {
+  if (qrl) {
+    qrl.$captureRef$;
+  } else {
     const el = context.$element$;
-    assertDefined(el, "invoke: element must be defined inside useLexicalScope()", context);
     const container = getWrappingContainer(el);
     const ctx = getContext(el);
-    assertDefined(container, `invoke: cant find parent q:container of`, el);
-    qrl = parseQRL(decodeURIComponent(String(context.$url$)), container);
-    assertQrl(qrl);
-    resumeIfNeeded(container);
-    inflateQrl(qrl, ctx);
-  } else {
-    assertQrl(qrl);
-    assertDefined(qrl.$captureRef$, "invoke: qrl $captureRef$ must be defined inside useLexicalScope()", qrl);
+    qrl = parseQRL(decodeURIComponent(String(context.$url$)), container), resumeIfNeeded(container), inflateQrl(qrl, ctx);
   }
   return qrl.$captureRef$;
 };
-const notifyChange = (subscriber, containerState) => {
-  if (isQwikElement(subscriber)) {
-    notifyRender(subscriber, containerState);
-  } else {
-    notifyWatch(subscriber, containerState);
-  }
-};
-const notifyRender = (hostElement, containerState) => {
-  const isServer2 = qDynamicPlatform && !qTest && containerState.$platform$.isServer;
-  if (!isServer2) {
-    resumeIfNeeded(containerState.$containerEl$);
-  }
-  const ctx = getContext(hostElement);
-  assertDefined(ctx.$renderQrl$, `render: notified host element must have a defined $renderQrl$`, ctx);
-  if (ctx.$dirty$) {
-    return;
-  }
-  ctx.$dirty$ = true;
-  const activeRendering = containerState.$hostsRendering$ !== void 0;
-  if (activeRendering) {
-    assertDefined(containerState.$renderPromise$, "render: while rendering, $renderPromise$ must be defined", containerState);
-    containerState.$hostsStaging$.add(hostElement);
-  } else {
-    if (isServer2) {
-      logWarn("Can not rerender in server platform");
-      return void 0;
-    }
-    containerState.$hostsNext$.add(hostElement);
-    scheduleFrame(containerState);
-  }
-};
 const notifyWatch = (watch, containerState) => {
-  if (watch.$flags$ & WatchFlagsIsDirty) {
-    return;
-  }
-  watch.$flags$ |= WatchFlagsIsDirty;
-  const activeRendering = containerState.$hostsRendering$ !== void 0;
-  if (activeRendering) {
-    assertDefined(containerState.$renderPromise$, "render: while rendering, $renderPromise$ must be defined", containerState);
-    containerState.$watchStaging$.add(watch);
-  } else {
-    containerState.$watchNext$.add(watch);
-    scheduleFrame(containerState);
-  }
+  watch.$flags$ & WatchFlagsIsDirty || (watch.$flags$ |= WatchFlagsIsDirty, void 0 !== containerState.$hostsRendering$ ? (containerState.$renderPromise$, containerState.$watchStaging$.add(watch)) : (containerState.$watchNext$.add(watch), scheduleFrame(containerState)));
 };
-const scheduleFrame = (containerState) => {
-  if (containerState.$renderPromise$ === void 0) {
-    containerState.$renderPromise$ = containerState.$platform$.nextTick(() => renderMarked(containerState));
-  }
-  return containerState.$renderPromise$;
-};
+const scheduleFrame = (containerState) => (void 0 === containerState.$renderPromise$ && (containerState.$renderPromise$ = getPlatform().nextTick(() => renderMarked(containerState))), containerState.$renderPromise$);
 const _hW = () => {
   const [watch] = useLexicalScope();
   notifyWatch(watch, getContainerState(getWrappingContainer(watch.$el$)));
 };
 const renderMarked = async (containerState) => {
   const hostsRendering = containerState.$hostsRendering$ = new Set(containerState.$hostsNext$);
-  containerState.$hostsNext$.clear();
-  await executeWatchesBefore(containerState);
-  containerState.$hostsStaging$.forEach((host) => {
+  containerState.$hostsNext$.clear(), await executeWatchesBefore(containerState), containerState.$hostsStaging$.forEach((host) => {
     hostsRendering.add(host);
-  });
-  containerState.$hostsStaging$.clear();
+  }), containerState.$hostsStaging$.clear();
   const doc = getDocument(containerState.$containerEl$);
-  const platform = containerState.$platform$;
   const renderingQueue = Array.from(hostsRendering);
   sortNodes(renderingQueue);
   const ctx = createRenderContext(doc, containerState);
@@ -1980,364 +1296,184 @@ const renderMarked = async (containerState) => {
     if (!staticCtx.$hostElements$.has(el)) {
       const elCtx = getContext(el);
       if (elCtx.$renderQrl$) {
-        assertTrue(el.isConnected, "element must be connected to the dom");
-        staticCtx.$roots$.push(elCtx);
+        el.isConnected, staticCtx.$roots$.push(elCtx);
         try {
           await renderComponent(ctx, elCtx, getFlags(el.parentElement));
-        } catch (e) {
-          logError(codeToText(QError_errorWhileRendering), e);
+        } catch (err) {
+          logError(err);
         }
       }
     }
   }
-  staticCtx.$operations$.push(...staticCtx.$postOperations$);
-  if (staticCtx.$operations$.length === 0) {
-    printRenderStats(staticCtx);
-    postRendering(containerState, staticCtx);
-    return ctx;
-  }
-  return platform.raf(() => {
-    executeContextWithSlots(ctx);
-    printRenderStats(staticCtx);
-    postRendering(containerState, staticCtx);
-    return ctx;
+  return staticCtx.$operations$.push(...staticCtx.$postOperations$), 0 === staticCtx.$operations$.length ? void postRendering(containerState, staticCtx) : getPlatform().raf(() => {
+    (({ $static$: ctx2 }) => {
+      executeDOMRender(ctx2);
+    })(ctx), postRendering(containerState, staticCtx);
   });
 };
 const getFlags = (el) => {
   let flags = 0;
-  if (el) {
-    if (el.namespaceURI === SVG_NS) {
-      flags |= IS_SVG;
-    }
-    if (el.tagName === "HEAD") {
-      flags |= IS_HEAD$1;
-    }
-  }
-  return flags;
+  return el && (el.namespaceURI === SVG_NS && (flags |= 1), "HEAD" === el.tagName && (flags |= 2)), flags;
 };
 const postRendering = async (containerState, ctx) => {
-  await executeWatchesAfter(containerState, (watch, stage) => {
-    if ((watch.$flags$ & WatchFlagsIsEffect) === 0) {
-      return false;
-    }
-    if (stage) {
-      return ctx.$hostElements$.has(watch.$el$);
-    }
-    return true;
-  });
-  containerState.$hostsStaging$.forEach((el) => {
+  await executeWatchesAfter(containerState, (watch, stage) => 0 != (watch.$flags$ & WatchFlagsIsEffect) && (!stage || ctx.$hostElements$.has(watch.$el$))), containerState.$hostsStaging$.forEach((el) => {
     containerState.$hostsNext$.add(el);
-  });
-  containerState.$hostsStaging$.clear();
-  containerState.$hostsRendering$ = void 0;
-  containerState.$renderPromise$ = void 0;
-  if (containerState.$hostsNext$.size + containerState.$watchNext$.size > 0) {
-    scheduleFrame(containerState);
-  }
+  }), containerState.$hostsStaging$.clear(), containerState.$hostsRendering$ = void 0, containerState.$renderPromise$ = void 0, containerState.$hostsNext$.size + containerState.$watchNext$.size > 0 && scheduleFrame(containerState);
 };
 const executeWatchesBefore = async (containerState) => {
   const resourcesPromises = [];
+  const containerEl = containerState.$containerEl$;
   const watchPromises = [];
-  const isWatch = (watch) => (watch.$flags$ & WatchFlagsIsWatch) !== 0;
-  const isResourceWatch2 = (watch) => (watch.$flags$ & WatchFlagsIsResource) !== 0;
+  const isWatch = (watch) => 0 != (watch.$flags$ & WatchFlagsIsWatch);
+  const isResourceWatch2 = (watch) => 0 != (watch.$flags$ & WatchFlagsIsResource);
   containerState.$watchNext$.forEach((watch) => {
-    if (isWatch(watch)) {
-      watchPromises.push(then(watch.$qrl$.$resolveLazy$(), () => watch));
-      containerState.$watchNext$.delete(watch);
-    }
-    if (isResourceWatch2(watch)) {
-      resourcesPromises.push(then(watch.$qrl$.$resolveLazy$(), () => watch));
-      containerState.$watchNext$.delete(watch);
-    }
+    isWatch(watch) && (watchPromises.push(then(watch.$qrl$.$resolveLazy$(containerEl), () => watch)), containerState.$watchNext$.delete(watch)), isResourceWatch2(watch) && (resourcesPromises.push(then(watch.$qrl$.$resolveLazy$(containerEl), () => watch)), containerState.$watchNext$.delete(watch));
   });
   do {
-    containerState.$watchStaging$.forEach((watch) => {
-      if (isWatch(watch)) {
-        watchPromises.push(then(watch.$qrl$.$resolveLazy$(), () => watch));
-      } else if (isResourceWatch2(watch)) {
-        resourcesPromises.push(then(watch.$qrl$.$resolveLazy$(), () => watch));
-      } else {
-        containerState.$watchNext$.add(watch);
-      }
-    });
-    containerState.$watchStaging$.clear();
-    if (watchPromises.length > 0) {
+    if (containerState.$watchStaging$.forEach((watch) => {
+      isWatch(watch) ? watchPromises.push(then(watch.$qrl$.$resolveLazy$(containerEl), () => watch)) : isResourceWatch2(watch) ? resourcesPromises.push(then(watch.$qrl$.$resolveLazy$(containerEl), () => watch)) : containerState.$watchNext$.add(watch);
+    }), containerState.$watchStaging$.clear(), watchPromises.length > 0) {
       const watches = await Promise.all(watchPromises);
-      sortWatches(watches);
-      await Promise.all(watches.map((watch) => {
-        return runSubscriber(watch, containerState);
-      }));
-      watchPromises.length = 0;
+      sortWatches(watches), await Promise.all(watches.map((watch) => runSubscriber(watch, containerState))), watchPromises.length = 0;
     }
   } while (containerState.$watchStaging$.size > 0);
   if (resourcesPromises.length > 0) {
     const resources = await Promise.all(resourcesPromises);
-    sortWatches(resources);
-    resources.forEach((watch) => runSubscriber(watch, containerState));
+    sortWatches(resources), resources.forEach((watch) => runSubscriber(watch, containerState));
   }
 };
 const executeWatchesAfter = async (containerState, watchPred) => {
   const watchPromises = [];
+  const containerEl = containerState.$containerEl$;
   containerState.$watchNext$.forEach((watch) => {
-    if (watchPred(watch, false)) {
-      watchPromises.push(then(watch.$qrl$.$resolveLazy$(), () => watch));
-      containerState.$watchNext$.delete(watch);
-    }
+    watchPred(watch, false) && (watchPromises.push(then(watch.$qrl$.$resolveLazy$(containerEl), () => watch)), containerState.$watchNext$.delete(watch));
   });
   do {
-    containerState.$watchStaging$.forEach((watch) => {
-      if (watchPred(watch, true)) {
-        watchPromises.push(then(watch.$qrl$.$resolveLazy$(), () => watch));
-      } else {
-        containerState.$watchNext$.add(watch);
-      }
-    });
-    containerState.$watchStaging$.clear();
-    if (watchPromises.length > 0) {
+    if (containerState.$watchStaging$.forEach((watch) => {
+      watchPred(watch, true) ? watchPromises.push(then(watch.$qrl$.$resolveLazy$(containerEl), () => watch)) : containerState.$watchNext$.add(watch);
+    }), containerState.$watchStaging$.clear(), watchPromises.length > 0) {
       const watches = await Promise.all(watchPromises);
-      sortWatches(watches);
-      await Promise.all(watches.map((watch) => {
-        return runSubscriber(watch, containerState);
-      }));
-      watchPromises.length = 0;
+      sortWatches(watches), await Promise.all(watches.map((watch) => runSubscriber(watch, containerState))), watchPromises.length = 0;
     }
   } while (containerState.$watchStaging$.size > 0);
 };
 const sortNodes = (elements) => {
-  elements.sort((a, b) => a.compareDocumentPosition(getRootNode(b)) & 2 ? 1 : -1);
+  elements.sort((a, b) => 2 & a.compareDocumentPosition(getRootNode(b)) ? 1 : -1);
 };
 const sortWatches = (watches) => {
-  watches.sort((a, b) => {
-    if (a.$el$ === b.$el$) {
-      return a.$index$ < b.$index$ ? -1 : 1;
-    }
-    return (a.$el$.compareDocumentPosition(getRootNode(b.$el$)) & 2) !== 0 ? 1 : -1;
-  });
+  watches.sort((a, b) => a.$el$ === b.$el$ ? a.$index$ < b.$index$ ? -1 : 1 : 0 != (2 & a.$el$.compareDocumentPosition(getRootNode(b.$el$))) ? 1 : -1);
 };
 const CONTAINER_STATE = Symbol("ContainerState");
 const getContainerState = (containerEl) => {
   let set = containerEl[CONTAINER_STATE];
-  if (!set) {
-    containerEl[CONTAINER_STATE] = set = {
-      $containerEl$: containerEl,
-      $proxyMap$: /* @__PURE__ */ new WeakMap(),
-      $subsManager$: null,
-      $platform$: getPlatform(containerEl),
-      $watchNext$: /* @__PURE__ */ new Set(),
-      $watchStaging$: /* @__PURE__ */ new Set(),
-      $hostsNext$: /* @__PURE__ */ new Set(),
-      $hostsStaging$: /* @__PURE__ */ new Set(),
-      $renderPromise$: void 0,
-      $hostsRendering$: void 0,
-      $envData$: {},
-      $elementIndex$: 0,
-      $styleIds$: /* @__PURE__ */ new Set(),
-      $mutableProps$: false
-    };
-    seal(set);
-    set.$subsManager$ = createSubscriptionManager(set);
-  }
-  return set;
+  return set || (containerEl[CONTAINER_STATE] = set = createContainerState(containerEl)), set;
+};
+const createContainerState = (containerEl) => {
+  const containerState = {
+    $containerEl$: containerEl,
+    $proxyMap$: /* @__PURE__ */ new WeakMap(),
+    $subsManager$: null,
+    $watchNext$: /* @__PURE__ */ new Set(),
+    $watchStaging$: /* @__PURE__ */ new Set(),
+    $hostsNext$: /* @__PURE__ */ new Set(),
+    $hostsStaging$: /* @__PURE__ */ new Set(),
+    $renderPromise$: void 0,
+    $hostsRendering$: void 0,
+    $envData$: {},
+    $elementIndex$: 0,
+    $styleIds$: /* @__PURE__ */ new Set(),
+    $mutableProps$: false
+  };
+  return containerState.$subsManager$ = createSubscriptionManager(containerState), containerState;
 };
 const createSubscriptionManager = (containerState) => {
   const objToSubs = /* @__PURE__ */ new Map();
   const subsToObjs = /* @__PURE__ */ new Map();
-  const clearSub = (sub) => {
-    const subs = subsToObjs.get(sub);
-    if (subs) {
-      subs.forEach((s) => {
-        s.delete(sub);
-      });
-      subsToObjs.delete(sub);
-      subs.clear();
-    }
-  };
-  const tryGetLocal = (obj) => {
-    assertEqual(getProxyTarget(obj), void 0, "object can not be be a proxy", obj);
-    return objToSubs.get(obj);
-  };
+  const tryGetLocal = (obj) => (getProxyTarget(obj), objToSubs.get(obj));
   const trackSubToObj = (subscriber, map) => {
     let set = subsToObjs.get(subscriber);
-    if (!set) {
-      subsToObjs.set(subscriber, set = /* @__PURE__ */ new Set());
-    }
-    set.add(map);
-  };
-  const getLocal = (obj, initialMap) => {
-    let local = tryGetLocal(obj);
-    if (local) {
-      assertEqual(initialMap, void 0, "subscription map can not be set to an existing object", local);
-    } else {
-      const map = !initialMap ? /* @__PURE__ */ new Map() : initialMap;
-      map.forEach((_, key) => {
-        trackSubToObj(key, map);
-      });
-      objToSubs.set(obj, local = {
-        $subs$: map,
-        $addSub$(subscriber, key) {
-          if (key == null) {
-            map.set(subscriber, null);
-          } else {
-            let sub = map.get(subscriber);
-            if (sub === void 0) {
-              map.set(subscriber, sub = /* @__PURE__ */ new Set());
-            }
-            if (sub) {
-              sub.add(key);
-            }
-          }
-          trackSubToObj(subscriber, map);
-        },
-        $notifySubs$(key) {
-          map.forEach((value, subscriber) => {
-            if (value === null || !key || value.has(key)) {
-              notifyChange(subscriber, containerState);
-            }
-          });
-        }
-      });
-      seal(local);
-    }
-    return local;
+    set || subsToObjs.set(subscriber, set = /* @__PURE__ */ new Set()), set.add(map);
   };
   const manager = {
     $tryGetLocal$: tryGetLocal,
-    $getLocal$: getLocal,
-    $clearSub$: clearSub
+    $getLocal$: (obj, initialMap) => {
+      let local = tryGetLocal(obj);
+      if (local)
+        ;
+      else {
+        const map = initialMap || /* @__PURE__ */ new Map();
+        map.forEach((_, key) => {
+          trackSubToObj(key, map);
+        }), objToSubs.set(obj, local = {
+          $subs$: map,
+          $addSub$(subscriber, key) {
+            if (null == key) {
+              map.set(subscriber, null);
+            } else {
+              let sub = map.get(subscriber);
+              void 0 === sub && map.set(subscriber, sub = /* @__PURE__ */ new Set()), sub && sub.add(key);
+            }
+            trackSubToObj(subscriber, map);
+          },
+          $notifySubs$(key) {
+            map.forEach((value, subscriber) => {
+              null !== value && key && !value.has(key) || ((subscriber2, containerState2) => {
+                isQwikElement(subscriber2) ? ((hostElement, containerState3) => {
+                  const server = isServer$1();
+                  server || resumeIfNeeded(containerState3.$containerEl$);
+                  const ctx = getContext(hostElement);
+                  if (ctx.$renderQrl$, !ctx.$dirty$) {
+                    if (ctx.$dirty$ = true, void 0 !== containerState3.$hostsRendering$) {
+                      containerState3.$renderPromise$, containerState3.$hostsStaging$.add(hostElement);
+                    } else {
+                      if (server) {
+                        return void logWarn();
+                      }
+                      containerState3.$hostsNext$.add(hostElement), scheduleFrame(containerState3);
+                    }
+                  }
+                })(subscriber2, containerState2) : notifyWatch(subscriber2, containerState2);
+              })(subscriber, containerState);
+            });
+          }
+        });
+      }
+      return local;
+    },
+    $clearSub$: (sub) => {
+      const subs = subsToObjs.get(sub);
+      subs && (subs.forEach((s) => {
+        s.delete(sub);
+      }), subsToObjs.delete(sub), subs.clear());
+    }
   };
-  seal(manager);
   return manager;
 };
-const pauseContainer = async (elmOrDoc, defaultParentJSON) => {
-  const doc = getDocument(elmOrDoc);
-  const documentElement = doc.documentElement;
-  const containerEl = isDocument(elmOrDoc) ? documentElement : elmOrDoc;
-  if (directGetAttribute(containerEl, QContainerAttr) === "paused") {
-    throw qError(QError_containerAlreadyPaused);
-  }
-  const parentJSON = defaultParentJSON != null ? defaultParentJSON : containerEl === doc.documentElement ? doc.body : containerEl;
-  const data2 = await pauseFromContainer(containerEl);
-  const script = doc.createElement("script");
-  directSetAttribute(script, "type", "qwik/json");
-  script.textContent = escapeText$1(JSON.stringify(data2.state, void 0, qDev$1 ? "  " : void 0));
-  parentJSON.appendChild(script);
-  directSetAttribute(containerEl, QContainerAttr, "paused");
-  return data2;
-};
-const moveStyles = (containerEl, containerState) => {
-  const head2 = containerEl.ownerDocument.head;
-  containerEl.querySelectorAll("style[q\\:style]").forEach((el) => {
-    containerState.$styleIds$.add(directGetAttribute(el, QStyle));
-    head2.appendChild(el);
-  });
-};
-const resumeContainer = (containerEl) => {
-  if (!isContainer(containerEl)) {
-    logWarn("Skipping hydration because parent element is not q:container");
-    return;
-  }
-  const doc = getDocument(containerEl);
-  const isDocElement = containerEl === doc.documentElement;
-  const parentJSON = isDocElement ? doc.body : containerEl;
-  const script = getQwikJSON(parentJSON);
-  if (!script) {
-    logWarn("Skipping hydration qwik/json metadata was not found.");
-    return;
-  }
-  script.remove();
-  const containerState = getContainerState(containerEl);
-  moveStyles(containerEl, containerState);
-  const meta = JSON.parse(unescapeText(script.textContent || "{}"));
-  const elements = /* @__PURE__ */ new Map();
-  const getObject = (id) => {
-    return getObjectImpl(id, elements, meta.objs, containerState);
-  };
-  let maxId = 0;
-  getNodesInScope(containerEl, hasQId).forEach((el) => {
-    const id = directGetAttribute(el, ELEMENT_ID);
-    assertDefined(id, `resume: element missed q:id`, el);
-    const ctx = getContext(el);
-    ctx.$id$ = id;
-    ctx.$mounted$ = true;
-    elements.set(ELEMENT_ID_PREFIX + id, el);
-    maxId = Math.max(maxId, strToInt(id));
-  });
-  containerState.$elementIndex$ = ++maxId;
-  const parser = createParser(getObject, containerState, doc);
-  reviveValues(meta.objs, meta.subs, getObject, containerState, parser);
-  for (const obj of meta.objs) {
-    reviveNestedObjects(obj, getObject, parser);
-  }
-  Object.entries(meta.ctx).forEach(([elementID, ctxMeta]) => {
-    const el = getObject(elementID);
-    assertDefined(el, `resume: cant find dom node for id`, elementID);
-    const ctx = getContext(el);
-    const qobj = ctxMeta.r;
-    const seq = ctxMeta.s;
-    const host = ctxMeta.h;
-    const contexts = ctxMeta.c;
-    const watches = ctxMeta.w;
-    if (qobj) {
-      assertTrue(isElement(el), "el must be an actual DOM element");
-      ctx.$refMap$.push(...qobj.split(" ").map(getObject));
-      ctx.li = getDomListeners(ctx, containerEl);
-    }
-    if (seq) {
-      ctx.$seq$ = seq.split(" ").map(getObject);
-    }
-    if (watches) {
-      ctx.$watches$ = watches.split(" ").map(getObject);
-    }
-    if (contexts) {
-      contexts.split(" ").map((part) => {
-        const [key, value] = part.split("=");
-        if (!ctx.$contexts$) {
-          ctx.$contexts$ = /* @__PURE__ */ new Map();
-        }
-        ctx.$contexts$.set(key, getObject(value));
-      });
-    }
-    if (host) {
-      const [props, renderQrl] = host.split(" ");
-      assertDefined(props, `resume: props missing in host metadata`, host);
-      assertDefined(renderQrl, `resume: renderQRL missing in host metadata`, host);
-      ctx.$props$ = getObject(props);
-      ctx.$renderQrl$ = getObject(renderQrl);
-    }
-  });
-  directSetAttribute(containerEl, QContainerAttr, "resumed");
-  logDebug("Container resumed");
-  emitEvent(containerEl, "qresume", void 0, true);
-};
-const pauseFromContainer = async (containerEl) => {
-  const containerState = getContainerState(containerEl);
-  const contexts = getNodesInScope(containerEl, hasQId).map(tryGetContext);
-  return _pauseFromContexts(contexts, containerState);
-};
-const _pauseFromContexts = async (elements, containerState) => {
-  const elementToIndex = /* @__PURE__ */ new Map();
+const _pauseFromContexts = async (allContexts, containerState) => {
   const collector = createCollector(containerState);
   const listeners = [];
-  for (const ctx of elements) {
+  for (const ctx of allContexts) {
     const el = ctx.$element$;
-    if (isElement(el)) {
-      Object.entries(ctx.li).forEach(([key, qrls]) => {
-        qrls.forEach((qrl) => {
-          listeners.push({
-            key,
-            qrl,
-            el
-          });
+    const ctxLi = ctx.li;
+    for (const key of Object.keys(ctxLi)) {
+      for (const qrl of ctxLi[key]) {
+        const captured = qrl.$captureRef$;
+        if (captured) {
+          for (const obj of captured) {
+            collectValue(obj, collector, true);
+          }
+        }
+        isElement(el) && listeners.push({
+          key,
+          qrl,
+          el,
+          eventName: getEventName(key)
         });
-      });
-    }
-    if (ctx.$watches$) {
-      for (const watch of ctx.$watches$) {
-        collector.$watches$.push(watch);
       }
     }
+    ctx.$watches$ && collector.$watches$.push(...ctx.$watches$);
   }
-  if (listeners.length === 0) {
+  if (0 === listeners.length) {
     return {
       state: {
         ctx: {},
@@ -2346,161 +1482,109 @@ const _pauseFromContexts = async (elements, containerState) => {
       },
       objs: [],
       listeners: [],
-      pendingContent: [],
       mode: "static"
     };
   }
-  for (const listener of listeners) {
-    assertQrl(listener.qrl);
-    const captured = listener.qrl.$captureRef$;
-    if (captured) {
-      for (const obj of captured) {
-        await collectValue(obj, collector, true);
-      }
-    }
-    const ctx = tryGetContext(listener.el);
-    for (const obj of ctx.$refMap$) {
-      await collectValue(obj, collector, true);
-    }
+  let promises;
+  for (; (promises = collector.$promises$).length > 0; ) {
+    collector.$promises$ = [], await Promise.allSettled(promises);
   }
   const canRender = collector.$elements$.length > 0;
   if (canRender) {
-    for (const ctx of elements) {
-      if (isVirtualElement(ctx.$element$)) {
-        await collectProps(ctx.$element$, ctx.$props$, collector);
-      }
-      if (ctx.$contexts$) {
+    for (const element of collector.$elements$) {
+      collectElementData(tryGetContext(element), collector);
+    }
+    for (const ctx of allContexts) {
+      if (ctx.$props$ && collectMutableProps(ctx.$element$, ctx.$props$, collector), ctx.$contexts$) {
         for (const item of ctx.$contexts$.values()) {
-          await collectValue(item, collector, false);
+          collectValue(item, collector, false);
         }
       }
     }
   }
-  const objs = Array.from(new Set(collector.$objMap$.values()));
+  for (; (promises = collector.$promises$).length > 0; ) {
+    collector.$promises$ = [], await Promise.allSettled(promises);
+  }
+  const elementToIndex = /* @__PURE__ */ new Map();
+  const objs = Array.from(collector.$objSet$.keys());
   const objToId = /* @__PURE__ */ new Map();
   const getElementID = (el) => {
     let id = elementToIndex.get(el);
-    if (id === void 0) {
-      if (el.isConnected) {
-        id = getQId(el);
-        if (!id) {
-          console.warn("Missing ID", el);
-        } else {
-          id = ELEMENT_ID_PREFIX + id;
-        }
-      } else {
-        id = null;
-      }
-      elementToIndex.set(el, id);
-    }
-    return id;
+    return void 0 === id && (id = ((el2) => {
+      const ctx = tryGetContext(el2);
+      return ctx ? ctx.$id$ : null;
+    })(el), id ? id = "#" + id : console.warn("Missing ID", el), elementToIndex.set(el, id)), id;
   };
   const getObjId = (obj) => {
     let suffix = "";
-    if (isMutable(obj)) {
-      obj = obj.v;
-      suffix = "%";
-    }
-    if (isPromise(obj)) {
+    if (isMutable(obj) && (obj = obj.mut, suffix = "%"), isPromise(obj)) {
       const { value, resolved } = getPromiseValue(obj);
-      obj = value;
-      if (resolved) {
-        suffix += "~";
-      } else {
-        suffix += "_";
-      }
+      obj = value, suffix += resolved ? "~" : "_";
     }
     if (isObject(obj)) {
       const target = getProxyTarget(obj);
       if (target) {
-        suffix += "!";
-        obj = target;
-      }
-      if (!target && isQwikElement(obj)) {
+        suffix += "!", obj = target;
+      } else if (isQwikElement(obj)) {
         const elID = getElementID(obj);
-        if (elID) {
-          return elID + suffix;
-        }
-        return null;
+        return elID ? elID + suffix : null;
       }
     }
-    if (collector.$objMap$.has(obj)) {
-      const value = collector.$objMap$.get(obj);
-      const id = objToId.get(value);
-      assertTrue(typeof id === "number", "Can not find ID for object");
-      return intToStr(id) + suffix;
-    }
-    return null;
+    const id = objToId.get(obj);
+    return id ? id + suffix : null;
   };
   const mustGetObjId = (obj) => {
     const key = getObjId(obj);
-    if (key === null) {
+    if (null === key) {
       throw qError(QError_missingObjectId, obj);
     }
     return key;
   };
   const subsMap = /* @__PURE__ */ new Map();
   objs.forEach((obj) => {
-    var _a;
-    const flags = getProxyFlags(containerState.$proxyMap$.get(obj));
-    if (flags === void 0) {
+    const proxy = containerState.$proxyMap$.get(obj);
+    const flags = getProxyFlags(proxy);
+    if (void 0 === flags) {
       return;
     }
     const subsObj = [];
-    if (flags > 0) {
-      subsObj.push({
-        subscriber: "$",
-        data: flags
+    flags > 0 && subsObj.push({
+      subscriber: "$",
+      data: flags
+    }), getProxySubs(proxy).forEach((set, key) => {
+      isNode(key) && isVirtualElement(key) && !collector.$elements$.includes(key) || subsObj.push({
+        subscriber: key,
+        data: set ? Array.from(set) : null
       });
-    }
-    const subs2 = (_a = containerState.$subsManager$.$tryGetLocal$(obj)) == null ? void 0 : _a.$subs$;
-    if (subs2) {
-      subs2.forEach((set, key) => {
-        if (isNode(key) && isVirtualElement(key)) {
-          if (!collector.$elements$.includes(key)) {
-            return;
-          }
-        }
-        subsObj.push({
-          subscriber: key,
-          data: set ? Array.from(set) : null
-        });
-      });
-    }
-    if (subsObj.length > 0) {
-      subsMap.set(obj, subsObj);
-    }
-  });
-  objs.sort((a, b) => {
-    const isProxyA = subsMap.has(a) ? 0 : 1;
-    const isProxyB = subsMap.has(b) ? 0 : 1;
-    return isProxyA - isProxyB;
-  });
+    }), subsObj.length > 0 && subsMap.set(obj, subsObj);
+  }), objs.sort((a, b) => (subsMap.has(a) ? 0 : 1) - (subsMap.has(b) ? 0 : 1));
   let count = 0;
   for (const obj of objs) {
-    objToId.set(obj, count);
-    count++;
+    objToId.set(obj, intToStr(count)), count++;
+  }
+  if (collector.$noSerialize$.length > 0) {
+    const undefinedID = objToId.get(void 0);
+    for (const obj of collector.$noSerialize$) {
+      objToId.set(obj, undefinedID);
+    }
   }
   const subs = objs.map((obj) => {
     const sub = subsMap.get(obj);
     if (!sub) {
-      return null;
+      return;
     }
     const subsObj = {};
-    sub.forEach(({ subscriber, data: data2 }) => {
-      if (subscriber === "$") {
+    return sub.forEach(({ subscriber, data: data2 }) => {
+      if ("$" === subscriber) {
         subsObj[subscriber] = data2;
       } else {
         const id = getObjId(subscriber);
-        if (id !== null) {
-          subsObj[id] = data2;
-        }
+        null !== id && (subsObj[id] = data2);
       }
-    });
-    return subsObj;
+    }), subsObj;
   }).filter(isNotNullable);
   const convertedObjs = objs.map((obj) => {
-    if (obj === null) {
+    if (null === obj) {
       return null;
     }
     const typeObj = typeof obj;
@@ -2513,29 +1597,27 @@ const _pauseFromContexts = async (elements, containerState) => {
         return obj;
       default:
         const value = serializeValue(obj, getObjId, containerState);
-        if (value !== void 0) {
+        if (void 0 !== value) {
           return value;
         }
-        if (typeObj === "object") {
+        if ("object" === typeObj) {
           if (isArray(obj)) {
             return obj.map(mustGetObjId);
           }
           if (isSerializableObject(obj)) {
             const output = {};
-            Object.entries(obj).forEach(([key, value2]) => {
-              output[key] = mustGetObjId(value2);
-            });
+            for (const key of Object.keys(obj)) {
+              output[key] = mustGetObjId(obj[key]);
+            }
             return output;
           }
         }
-        break;
     }
     throw qError(QError_verifySerializable, obj);
   });
   const meta = {};
-  elements.forEach((ctx) => {
+  allContexts.forEach((ctx) => {
     const node = ctx.$element$;
-    assertDefined(ctx, `pause: missing context for dom node`, node);
     const ref = ctx.$refMap$;
     const props = ctx.$props$;
     const contexts = ctx.$contexts$;
@@ -2547,36 +1629,16 @@ const _pauseFromContexts = async (elements, containerState) => {
     let add = false;
     if (ref.length > 0) {
       const value = ref.map(mustGetObjId).join(" ");
-      if (value) {
-        metaValue.r = value;
-        add = true;
-      }
+      value && (metaValue.r = value, add = true);
     }
     if (canRender) {
-      if (elementCaptured && props) {
-        const objs2 = [props];
-        if (renderQrl) {
-          objs2.push(renderQrl);
-        }
-        const value = objs2.map(mustGetObjId).join(" ");
-        if (value) {
-          metaValue.h = value;
-          add = true;
-        }
-      }
-      if (watches && watches.length > 0) {
+      if (elementCaptured && props && (metaValue.h = mustGetObjId(props) + " " + mustGetObjId(renderQrl), add = true), watches && watches.length > 0) {
         const value = watches.map(getObjId).filter(isNotNullable).join(" ");
-        if (value) {
-          metaValue.w = value;
-          add = true;
-        }
+        value && (metaValue.w = value, add = true);
       }
       if (elementCaptured && seq && seq.length > 0) {
         const value = seq.map(mustGetObjId).join(" ");
-        if (value) {
-          metaValue.s = value;
-          add = true;
-        }
+        metaValue.s = value, add = true;
       }
       if (contexts) {
         const serializedContexts = [];
@@ -2584,36 +1646,16 @@ const _pauseFromContexts = async (elements, containerState) => {
           serializedContexts.push(`${key}=${mustGetObjId(value2)}`);
         });
         const value = serializedContexts.join(" ");
-        if (value) {
-          metaValue.c = value;
-          add = true;
-        }
+        value && (metaValue.c = value, add = true);
       }
     }
     if (add) {
       const elementID = getElementID(node);
-      assertDefined(elementID, `pause: can not generate ID for dom node`, node);
       meta[elementID] = metaValue;
     }
   });
-  const pendingContent = [];
   for (const watch of collector.$watches$) {
-    if (qDev$1) {
-      if (watch.$flags$ & WatchFlagsIsDirty) {
-        logWarn("Serializing dirty watch. Looks like an internal error.");
-      }
-      if (!isConnected(watch)) {
-        logWarn("Serializing disconneted watch. Looks like an internal error.");
-      }
-    }
     destroyWatch(watch);
-  }
-  if (qDev$1) {
-    elementToIndex.forEach((value, el) => {
-      if (!value) {
-        logWarn("unconnected element", el.nodeName, "\n");
-      }
-    });
   }
   return {
     state: {
@@ -2621,99 +1663,34 @@ const _pauseFromContexts = async (elements, containerState) => {
       objs: convertedObjs,
       subs
     },
-    pendingContent,
     objs,
     listeners,
     mode: canRender ? "render" : "listeners"
   };
 };
-const getQwikJSON = (parentElm) => {
-  let child = parentElm.lastElementChild;
-  while (child) {
-    if (child.tagName === "SCRIPT" && directGetAttribute(child, "type") === "qwik/json") {
-      return child;
-    }
-    child = child.previousElementSibling;
-  }
-  return void 0;
-};
-const SHOW_ELEMENT = 1;
-const SHOW_COMMENT = 128;
-const FILTER_ACCEPT = 1;
-const FILTER_REJECT = 2;
-const FILTER_SKIP = 3;
 const getNodesInScope = (parent, predicate) => {
-  if (predicate(parent))
-    ;
-  const walker = parent.ownerDocument.createTreeWalker(parent, SHOW_ELEMENT | SHOW_COMMENT, {
-    acceptNode(node) {
-      if (isContainer(node)) {
-        return FILTER_REJECT;
-      }
-      return predicate(node) ? FILTER_ACCEPT : FILTER_SKIP;
-    }
+  predicate(parent);
+  const walker = parent.ownerDocument.createTreeWalker(parent, 129, {
+    acceptNode: (node) => isContainer(node) ? 2 : predicate(node) ? 1 : 3
   });
   const pars = [];
   let currentNode = null;
-  while (currentNode = walker.nextNode()) {
+  for (; currentNode = walker.nextNode(); ) {
     pars.push(processVirtualNodes(currentNode));
   }
   return pars;
 };
-const reviveValues = (objs, subs, getObject, containerState, parser) => {
-  for (let i = 0; i < objs.length; i++) {
-    const value = objs[i];
-    if (isString(value)) {
-      objs[i] = value === UNDEFINED_PREFIX ? void 0 : parser.prepare(value);
-    }
-  }
-  for (let i = 0; i < subs.length; i++) {
-    const value = objs[i];
-    const sub = subs[i];
-    if (sub) {
-      const converted = /* @__PURE__ */ new Map();
-      let flags = 0;
-      Object.entries(sub).forEach((entry) => {
-        if (entry[0] === "$") {
-          flags = entry[1];
-          return;
-        }
-        const el = getObject(entry[0]);
-        if (!el) {
-          logWarn("QWIK can not revive subscriptions because of missing element ID", entry, value);
-          return;
-        }
-        const set = entry[1] === null ? null : new Set(entry[1]);
-        converted.set(el, set);
-      });
-      createProxy(value, containerState, flags, converted);
-    }
-  }
-};
 const reviveNestedObjects = (obj, getObject, parser) => {
-  if (parser.fill(obj)) {
-    return;
-  }
-  if (obj && typeof obj == "object") {
+  if (!parser.fill(obj) && obj && "object" == typeof obj) {
     if (isArray(obj)) {
       for (let i = 0; i < obj.length; i++) {
         const value = obj[i];
-        if (typeof value == "string") {
-          obj[i] = getObject(value);
-        } else {
-          reviveNestedObjects(value, getObject, parser);
-        }
+        "string" == typeof value ? obj[i] = getObject(value) : reviveNestedObjects(value, getObject, parser);
       }
     } else if (isSerializableObject(obj)) {
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          const value = obj[key];
-          if (typeof value == "string") {
-            obj[key] = getObject(value);
-          } else {
-            reviveNestedObjects(value, getObject, parser);
-          }
-        }
+      for (const key of Object.keys(obj)) {
+        const value = obj[key];
+        "string" == typeof value ? obj[key] = getObject(value) : reviveNestedObjects(value, getObject, parser);
       }
     }
   }
@@ -2723,279 +1700,178 @@ const OBJECT_TRANSFORMS = {
     var _a;
     return (_a = containerState.$proxyMap$.get(obj)) != null ? _a : getOrCreateProxy(obj, containerState);
   },
-  "%": (obj) => {
-    return mutable(obj);
-  },
-  "~": (obj) => {
-    return Promise.resolve(obj);
-  },
-  _: (obj) => {
-    return Promise.reject(obj);
-  }
+  "%": (obj) => mutable(obj),
+  "~": (obj) => Promise.resolve(obj),
+  _: (obj) => Promise.reject(obj)
 };
-const getObjectImpl = (id, elements, objs, containerState) => {
-  assertTrue(typeof id === "string" && id.length > 0, "resume: id must be an non-empty string, got:", id);
-  if (id.startsWith(ELEMENT_ID_PREFIX)) {
-    assertTrue(elements.has(id), `missing element for id:`, id);
-    return elements.get(id);
-  }
-  const index2 = strToInt(id);
-  assertTrue(objs.length > index2, "resume: index is out of bounds", id);
-  let obj = objs[index2];
-  for (let i = id.length - 1; i >= 0; i--) {
-    const code = id[i];
-    const transform = OBJECT_TRANSFORMS[code];
-    if (!transform) {
-      break;
-    }
-    obj = transform(obj, containerState);
-  }
-  return obj;
+const collectMutableProps = (el, props, collector) => {
+  const subs = getProxySubs(props);
+  subs && subs.has(el) && collectElement(el, collector);
 };
-const collectProps = async (el, props, collector) => {
-  var _a;
-  const subs = (_a = collector.$containerState$.$subsManager$.$tryGetLocal$(getProxyTarget(props))) == null ? void 0 : _a.$subs$;
-  if (subs && subs.has(el)) {
-    await collectElement(el, collector);
-  }
+const createCollector = (containerState) => ({
+  $containerState$: containerState,
+  $seen$: /* @__PURE__ */ new Set(),
+  $objSet$: /* @__PURE__ */ new Set(),
+  $noSerialize$: [],
+  $elements$: [],
+  $watches$: [],
+  $promises$: []
+});
+const collectDeferElement = (el, collector) => {
+  collector.$elements$.includes(el) || collector.$elements$.push(el);
 };
-const createCollector = (containerState) => {
-  return {
-    $seen$: /* @__PURE__ */ new Set(),
-    $seenLeaks$: /* @__PURE__ */ new Set(),
-    $objMap$: /* @__PURE__ */ new Map(),
-    $elements$: [],
-    $watches$: [],
-    $containerState$: containerState
-  };
-};
-const collectElement = async (el, collector) => {
+const collectElement = (el, collector) => {
   if (collector.$elements$.includes(el)) {
     return;
   }
   const ctx = tryGetContext(el);
-  if (ctx) {
-    collector.$elements$.push(el);
-    if (ctx.$props$) {
-      await collectValue(ctx.$props$, collector, false);
-    }
-    if (ctx.$renderQrl$) {
-      await collectValue(ctx.$renderQrl$, collector, false);
-    }
-    if (ctx.$seq$) {
-      for (const obj of ctx.$seq$) {
-        await collectValue(obj, collector, false);
-      }
-    }
-    if (ctx.$watches$) {
-      for (const obj of ctx.$watches$) {
-        await collectValue(obj, collector, false);
-      }
-    }
-    if (ctx.$contexts$) {
-      for (const obj of ctx.$contexts$.values()) {
-        await collectValue(obj, collector, false);
-      }
+  ctx && (collector.$elements$.push(el), collectElementData(ctx, collector));
+};
+const collectElementData = (ctx, collector) => {
+  if (ctx.$props$ && collectValue(ctx.$props$, collector, false), ctx.$renderQrl$ && collectValue(ctx.$renderQrl$, collector, false), ctx.$seq$) {
+    for (const obj of ctx.$seq$) {
+      collectValue(obj, collector, false);
     }
   }
-};
-const escapeText$1 = (str) => {
-  return str.replace(/<(\/?script)/g, "\\x3C$1");
-};
-const unescapeText = (str) => {
-  return str.replace(/\\x3C(\/?script)/g, "<$1");
-};
-const collectSubscriptions = async (target, collector) => {
-  var _a;
-  const subs = (_a = collector.$containerState$.$subsManager$.$tryGetLocal$(target)) == null ? void 0 : _a.$subs$;
-  if (subs) {
-    if (collector.$seen$.has(subs)) {
-      return;
+  if (ctx.$watches$) {
+    for (const obj of ctx.$watches$) {
+      collectValue(obj, collector, false);
     }
-    collector.$seen$.add(subs);
-    for (const key of Array.from(subs.keys())) {
-      if (isNode(key) && isVirtualElement(key)) {
-        await collectElement(key, collector);
-      } else {
-        await collectValue(key, collector, true);
-      }
+  }
+  if (ctx.$contexts$) {
+    for (const obj of ctx.$contexts$.values()) {
+      collectValue(obj, collector, false);
     }
   }
 };
 const PROMISE_VALUE = Symbol();
-const resolvePromise = (promise) => {
-  return promise.then((value) => {
-    const v = {
-      resolved: true,
-      value
-    };
-    promise[PROMISE_VALUE] = v;
-    return value;
-  }, (value) => {
-    const v = {
-      resolved: false,
-      value
-    };
-    promise[PROMISE_VALUE] = v;
-    return value;
-  });
-};
-const getPromiseValue = (promise) => {
-  assertTrue(PROMISE_VALUE in promise, "pause: promise was not resolved previously", promise);
-  return promise[PROMISE_VALUE];
-};
-const collectValue = async (obj, collector, leaks) => {
-  const input = obj;
-  const seen = leaks ? collector.$seenLeaks$ : collector.$seen$;
-  if (seen.has(obj)) {
-    return;
-  }
-  seen.add(obj);
-  if (!shouldSerialize(obj) || obj === void 0) {
-    collector.$objMap$.set(obj, void 0);
-    return;
-  }
-  if (obj != null) {
-    if (isQrl$1(obj)) {
-      collector.$objMap$.set(obj, obj);
-      if (obj.$captureRef$) {
-        for (const item of obj.$captureRef$) {
-          await collectValue(item, collector, leaks);
-        }
-      }
-      return;
-    }
-    if (typeof obj === "object") {
-      if (isPromise(obj)) {
-        const value = await resolvePromise(obj);
-        await collectValue(value, collector, leaks);
-        return;
-      }
-      const target = getProxyTarget(obj);
-      if (!target && isNode(obj)) {
-        if (isDocument(obj)) {
-          collector.$objMap$.set(obj, obj);
-        } else if (!isQwikElement(obj)) {
-          throw qError(QError_verifySerializable, obj);
-        }
-        return;
-      }
-      if (target) {
-        if (leaks) {
-          await collectSubscriptions(target, collector);
-        }
-        obj = target;
+const getPromiseValue = (promise) => promise[PROMISE_VALUE];
+const collectValue = (obj, collector, leaks) => {
+  if (null !== obj) {
+    const objType = typeof obj;
+    const seen = collector.$seen$;
+    switch (objType) {
+      case "function":
         if (seen.has(obj)) {
           return;
         }
-        seen.add(obj);
-        if (isResourceReturn(obj)) {
-          collector.$objMap$.set(target, target);
-          await collectValue(obj.promise, collector, leaks);
-          await collectValue(obj.resolved, collector, leaks);
+        if (seen.add(obj), !fastShouldSerialize(obj)) {
+          return collector.$objSet$.add(void 0), void collector.$noSerialize$.push(obj);
+        }
+        if (isQrl$1(obj)) {
+          if (collector.$objSet$.add(obj), obj.$captureRef$) {
+            for (const item of obj.$captureRef$) {
+              collectValue(item, collector, leaks);
+            }
+          }
           return;
         }
-      }
-      collector.$objMap$.set(obj, obj);
-      if (isArray(obj)) {
-        for (let i = 0; i < obj.length; i++) {
-          await collectValue(input[i], collector, leaks);
+        break;
+      case "object": {
+        if (seen.has(obj)) {
+          return;
         }
-      } else {
-        for (const key in obj) {
-          if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            await collectValue(input[key], collector, leaks);
+        if (seen.add(obj), !fastShouldSerialize(obj)) {
+          return collector.$objSet$.add(void 0), void collector.$noSerialize$.push(obj);
+        }
+        if (isPromise(obj)) {
+          return void collector.$promises$.push((promise = obj, promise.then((value) => {
+            const v = {
+              resolved: true,
+              value
+            };
+            return promise[PROMISE_VALUE] = v, value;
+          }, (value) => {
+            const v = {
+              resolved: false,
+              value
+            };
+            return promise[PROMISE_VALUE] = v, value;
+          })).then((value) => {
+            collectValue(value, collector, leaks);
+          }));
+        }
+        const target = getProxyTarget(obj);
+        const input = obj;
+        if (target) {
+          if (leaks && ((proxy, collector2) => {
+            const subs = getProxySubs(proxy);
+            if (!collector2.$seen$.has(subs)) {
+              collector2.$seen$.add(subs);
+              for (const key of Array.from(subs.keys())) {
+                isNode(key) && isVirtualElement(key) ? collectDeferElement(key, collector2) : collectValue(key, collector2, true);
+              }
+            }
+          })(input, collector), obj = target, seen.has(obj)) {
+            return;
+          }
+          if (seen.add(obj), isResourceReturn(obj)) {
+            return collector.$objSet$.add(target), collectValue(obj.promise, collector, leaks), void collectValue(obj.resolved, collector, leaks);
+          }
+        } else if (isNode(obj)) {
+          return;
+        }
+        if (isArray(obj)) {
+          for (let i = 0; i < obj.length; i++) {
+            collectValue(input[i], collector, leaks);
+          }
+        } else {
+          for (const key of Object.keys(obj)) {
+            collectValue(input[key], collector, leaks);
           }
         }
+        break;
       }
-      return;
     }
   }
-  collector.$objMap$.set(obj, obj);
+  var promise;
+  collector.$objSet$.add(obj);
 };
-const isContainer = (el) => {
-  return isElement(el) && el.hasAttribute(QContainerAttr);
-};
+const isContainer = (el) => isElement(el) && el.hasAttribute("q:container");
 const hasQId = (el) => {
   const node = processVirtualNodes(el);
-  if (isQwikElement(node)) {
-    return node.hasAttribute(ELEMENT_ID);
-  }
-  return false;
+  return !!isQwikElement(node) && node.hasAttribute("q:id");
 };
-const intToStr = (nu) => {
-  return nu.toString(36);
+const intToStr = (nu) => nu.toString(36);
+const strToInt = (nu) => parseInt(nu, 36);
+const getEventName = (attribute) => {
+  const colonPos = attribute.indexOf(":");
+  return attribute.slice(colonPos + 1).replace(/-./g, (x) => x[1].toUpperCase());
 };
-const strToInt = (nu) => {
-  return parseInt(nu, 36);
-};
-const WatchFlagsIsEffect = 1 << 0;
-const WatchFlagsIsWatch = 1 << 1;
-const WatchFlagsIsDirty = 1 << 2;
-const WatchFlagsIsCleanup = 1 << 3;
-const WatchFlagsIsResource = 1 << 4;
+const WatchFlagsIsEffect = 1;
+const WatchFlagsIsWatch = 2;
+const WatchFlagsIsDirty = 4;
+const WatchFlagsIsCleanup = 8;
+const WatchFlagsIsResource = 16;
 const useWatchQrl = (qrl, opts) => {
   const { get, set, ctx, i } = useSequentialScope();
   if (get) {
     return;
   }
-  assertQrl(qrl);
   const el = ctx.$hostElement$;
   const containerState = ctx.$renderCtx$.$static$.$containerState$;
   const watch = new Watch(WatchFlagsIsDirty | WatchFlagsIsWatch, i, el, qrl, void 0);
   const elCtx = getContext(el);
-  set(true);
-  qrl.$resolveLazy$();
-  if (!elCtx.$watches$) {
-    elCtx.$watches$ = [];
-  }
-  elCtx.$watches$.push(watch);
-  waitAndRun(ctx, () => runSubscriber(watch, containerState));
-  if (isServer$1(ctx)) {
-    useRunWatch(watch, opts == null ? void 0 : opts.eagerness);
-  }
+  set(true), qrl.$resolveLazy$(containerState.$containerEl$), elCtx.$watches$ || (elCtx.$watches$ = []), elCtx.$watches$.push(watch), waitAndRun(ctx, () => runSubscriber(watch, containerState, ctx.$renderCtx$)), isServer$1() && useRunWatch(watch, opts == null ? void 0 : opts.eagerness);
 };
-const isResourceWatch = (watch) => {
-  return !!watch.$resource$;
-};
-const runSubscriber = async (watch, containerState) => {
-  assertEqual(!!(watch.$flags$ & WatchFlagsIsDirty), true, "Resource is not dirty", watch);
-  if (isResourceWatch(watch)) {
-    await runResource(watch, containerState);
-  } else {
-    await runWatch(watch, containerState);
-  }
-};
+const isResourceWatch = (watch) => !!watch.$resource$;
+const runSubscriber = (watch, containerState, rctx) => (watch.$flags$, isResourceWatch(watch) ? runResource(watch, containerState) : runWatch(watch, containerState, rctx));
 const runResource = (watch, containerState, waitOn) => {
-  watch.$flags$ &= ~WatchFlagsIsDirty;
-  cleanupWatch(watch);
+  watch.$flags$ &= ~WatchFlagsIsDirty, cleanupWatch(watch);
   const el = watch.$el$;
-  const doc = getDocument(el);
-  const invokationContext = newInvokeContext(doc, el, void 0, "WatchEvent");
+  const invokationContext = newInvokeContext(el, void 0, "WatchEvent");
   const { $subsManager$: subsManager } = containerState;
   const watchFn = watch.$qrl$.getFn(invokationContext, () => {
     subsManager.$clearSub$(watch);
   });
   const cleanups = [];
   const resource = watch.$resource$;
-  assertDefined(resource, 'useResource: when running a resource, "watch.r" must be a defined.', watch);
-  const track = (obj, prop) => {
-    const target = getProxyTarget(obj);
-    if (target) {
-      const manager = subsManager.$getLocal$(target);
-      manager.$addSub$(watch, prop);
-    } else {
-      logErrorAndStop(codeToText(QError_trackUseStore), obj);
-    }
-    if (prop) {
-      return obj[prop];
-    } else {
-      return obj;
-    }
-  };
   const resourceTarget = unwrapProxy(resource);
   const opts = {
-    track,
+    track: (obj, prop) => {
+      const target = getProxyTarget(obj);
+      return target ? subsManager.$getLocal$(target).$addSub$(watch, prop) : logErrorAndStop(codeToText(QError_trackUseStore), obj), prop ? obj[prop] : obj;
+    },
     cleanup(callback) {
       cleanups.push(callback);
     },
@@ -3004,35 +1880,12 @@ const runResource = (watch, containerState, waitOn) => {
   let resolve;
   let reject;
   let done = false;
-  const setState = (resolved, value) => {
-    if (!done) {
-      done = true;
-      if (resolved) {
-        done = true;
-        resource.state = "resolved";
-        resource.resolved = value;
-        resource.error = void 0;
-        resolve(value);
-      } else {
-        done = true;
-        resource.state = "rejected";
-        resource.resolved = void 0;
-        resource.error = value;
-        reject(value);
-      }
-      return true;
-    }
-    return false;
-  };
+  const setState = (resolved, value) => !done && (done = true, resolved ? (done = true, resource.state = "resolved", resource.resolved = value, resource.error = void 0, resolve(value)) : (done = true, resource.state = "rejected", resource.resolved = void 0, resource.error = value, reject(value)), true);
   invoke(invokationContext, () => {
-    resource.state = "pending";
-    resource.resolved = void 0;
-    resource.promise = new Promise((r, re) => {
-      resolve = r;
-      reject = re;
+    resource.state = "pending", resource.resolved = void 0, resource.promise = new Promise((r, re) => {
+      resolve = r, reject = re;
     });
-  });
-  watch.$destroy$ = noSerialize(() => {
+  }), watch.$destroy$ = noSerialize(() => {
     cleanups.forEach((fn) => fn());
   });
   const promise = safeCall(() => then(waitOn, () => watchFn(opts)), (value) => {
@@ -3041,58 +1894,35 @@ const runResource = (watch, containerState, waitOn) => {
     setState(false, reason);
   });
   const timeout = resourceTarget.timeout;
-  if (timeout) {
-    return Promise.race([
-      promise,
-      delay(timeout).then(() => {
-        if (setState(false, "timeout")) {
-          cleanupWatch(watch);
-        }
-      })
-    ]);
-  }
-  return promise;
+  return timeout ? Promise.race([promise, delay(timeout).then(() => {
+    setState(false, "timeout") && cleanupWatch(watch);
+  })]) : promise;
 };
-const runWatch = (watch, containerState) => {
-  watch.$flags$ &= ~WatchFlagsIsDirty;
-  cleanupWatch(watch);
-  const el = watch.$el$;
-  const doc = getDocument(el);
-  const invokationContext = newInvokeContext(doc, el, void 0, "WatchEvent");
+const runWatch = (watch, containerState, rctx) => {
+  watch.$flags$ &= ~WatchFlagsIsDirty, cleanupWatch(watch);
+  const hostElement = watch.$el$;
+  const invokationContext = newInvokeContext(hostElement, void 0, "WatchEvent");
   const { $subsManager$: subsManager } = containerState;
   const watchFn = watch.$qrl$.getFn(invokationContext, () => {
     subsManager.$clearSub$(watch);
   });
-  const track = (obj, prop) => {
-    const target = getProxyTarget(obj);
-    if (target) {
-      const manager = subsManager.$getLocal$(target);
-      manager.$addSub$(watch, prop);
-    } else {
-      logErrorAndStop(codeToText(QError_trackUseStore), obj);
-    }
-    if (prop) {
-      return obj[prop];
-    } else {
-      return obj;
-    }
-  };
   const cleanups = [];
   watch.$destroy$ = noSerialize(() => {
     cleanups.forEach((fn) => fn());
   });
   const opts = {
-    track,
+    track: (obj, prop) => {
+      const target = getProxyTarget(obj);
+      return target ? subsManager.$getLocal$(target).$addSub$(watch, prop) : logErrorAndStop(codeToText(QError_trackUseStore), obj), prop ? obj[prop] : obj;
+    },
     cleanup(callback) {
       cleanups.push(callback);
     }
   };
   return safeCall(() => watchFn(opts), (returnValue) => {
-    if (isFunction(returnValue)) {
-      cleanups.push(returnValue);
-    }
+    isFunction(returnValue) && cleanups.push(returnValue);
   }, (reason) => {
-    logError(reason);
+    handleError(reason, hostElement, rctx);
   });
 };
 const cleanupWatch = (watch) => {
@@ -3107,141 +1937,78 @@ const cleanupWatch = (watch) => {
   }
 };
 const destroyWatch = (watch) => {
-  if (watch.$flags$ & WatchFlagsIsCleanup) {
-    watch.$flags$ &= ~WatchFlagsIsCleanup;
-    const cleanup = watch.$qrl$;
-    cleanup();
-  } else {
-    cleanupWatch(watch);
-  }
+  watch.$flags$ & WatchFlagsIsCleanup ? (watch.$flags$ &= ~WatchFlagsIsCleanup, (0, watch.$qrl$)()) : cleanupWatch(watch);
 };
 const useRunWatch = (watch, eagerness) => {
-  if (eagerness === "load") {
-    useOn("qinit", getWatchHandlerQrl(watch));
-  } else if (eagerness === "visible") {
-    useOn("qvisible", getWatchHandlerQrl(watch));
-  }
+  "load" === eagerness ? useOn("qinit", getWatchHandlerQrl(watch)) : "visible" === eagerness && useOn("qvisible", getWatchHandlerQrl(watch));
 };
 const getWatchHandlerQrl = (watch) => {
   const watchQrl = watch.$qrl$;
-  const watchHandler = createQRL(watchQrl.$chunk$, "_hW", _hW, null, null, [watch], watchQrl.$symbol$);
-  return watchHandler;
-};
-const isSubscriberDescriptor = (obj) => {
-  return isObject(obj) && obj instanceof Watch;
-};
-const serializeWatch = (watch, getObjId) => {
-  let value = `${intToStr(watch.$flags$)} ${intToStr(watch.$index$)} ${getObjId(watch.$qrl$)} ${getObjId(watch.$el$)}`;
-  if (isResourceWatch(watch)) {
-    value += ` ${getObjId(watch.$resource$)}`;
-  }
-  return value;
-};
-const parseWatch = (data2) => {
-  const [flags, index2, qrl, el, resource] = data2.split(" ");
-  return new Watch(strToInt(flags), strToInt(index2), el, qrl, resource);
+  return createQRL(watchQrl.$chunk$, "_hW", _hW, null, null, [watch], watchQrl.$symbol$);
 };
 class Watch {
   constructor($flags$, $index$, $el$, $qrl$, $resource$) {
-    this.$flags$ = $flags$;
-    this.$index$ = $index$;
-    this.$el$ = $el$;
-    this.$qrl$ = $qrl$;
-    this.$resource$ = $resource$;
+    this.$flags$ = $flags$, this.$index$ = $index$, this.$el$ = $el$, this.$qrl$ = $qrl$, this.$resource$ = $resource$;
   }
 }
-const _createResourceReturn = (opts) => {
-  const resource = {
-    __brand: "resource",
-    promise: void 0,
-    resolved: void 0,
-    error: void 0,
-    state: "pending",
-    timeout: opts == null ? void 0 : opts.timeout
-  };
-  return resource;
-};
-const isResourceReturn = (obj) => {
-  return isObject(obj) && obj.__brand === "resource";
-};
-const serializeResource = (resource, getObjId) => {
-  const state = resource.state;
-  if (state === "resolved") {
-    return `0 ${getObjId(resource.resolved)}`;
-  } else if (state === "pending") {
-    return `1`;
-  } else {
-    return `2 ${getObjId(resource.error)}`;
-  }
-};
-const parseResourceReturn = (data2) => {
-  const [first, id] = data2.split(" ");
-  const result = _createResourceReturn(void 0);
-  result.promise = Promise.resolve();
-  if (first === "0") {
-    result.state = "resolved";
-    result.resolved = id;
-  } else if (first === "1") {
-    result.state = "pending";
-    result.promise = new Promise(() => {
-    });
-  } else if (first === "2") {
-    result.state = "rejected";
-    result.error = id;
-  }
-  return result;
-};
+const _createResourceReturn = (opts) => ({
+  __brand: "resource",
+  promise: void 0,
+  resolved: void 0,
+  error: void 0,
+  state: "pending",
+  timeout: opts == null ? void 0 : opts.timeout
+});
+const isResourceReturn = (obj) => isObject(obj) && "resource" === obj.__brand;
 const UNDEFINED_PREFIX = "";
 const QRLSerializer = {
   prefix: "",
   test: (v) => isQrl$1(v),
-  serialize: (obj, getObjId, containerState) => {
-    return stringifyQRL(obj, {
-      $platform$: containerState.$platform$,
-      $getObjId$: getObjId
-    });
-  },
-  prepare: (data2, containerState) => {
-    return parseQRL(data2, containerState.$containerEl$);
-  },
+  serialize: (obj, getObjId, containerState) => stringifyQRL(obj, {
+    $getObjId$: getObjId
+  }),
+  prepare: (data2, containerState) => parseQRL(data2, containerState.$containerEl$),
   fill: (qrl, getObject) => {
-    if (qrl.$capture$ && qrl.$capture$.length > 0) {
-      qrl.$captureRef$ = qrl.$capture$.map(getObject);
-      qrl.$capture$ = null;
-    }
+    qrl.$capture$ && qrl.$capture$.length > 0 && (qrl.$captureRef$ = qrl.$capture$.map(getObject), qrl.$capture$ = null);
   }
 };
 const WatchSerializer = {
   prefix: "",
-  test: (v) => isSubscriberDescriptor(v),
-  serialize: (obj, getObjId) => serializeWatch(obj, getObjId),
-  prepare: (data2) => parseWatch(data2),
+  test: (v) => {
+    return isObject(obj = v) && obj instanceof Watch;
+    var obj;
+  },
+  serialize: (obj, getObjId) => ((watch, getObjId2) => {
+    let value = `${intToStr(watch.$flags$)} ${intToStr(watch.$index$)} ${getObjId2(watch.$qrl$)} ${getObjId2(watch.$el$)}`;
+    return isResourceWatch(watch) && (value += ` ${getObjId2(watch.$resource$)}`), value;
+  })(obj, getObjId),
+  prepare: (data2) => ((data3) => {
+    const [flags, index2, qrl, el, resource] = data3.split(" ");
+    return new Watch(strToInt(flags), strToInt(index2), el, qrl, resource);
+  })(data2),
   fill: (watch, getObject) => {
-    watch.$el$ = getObject(watch.$el$);
-    watch.$qrl$ = getObject(watch.$qrl$);
-    if (watch.$resource$) {
-      watch.$resource$ = getObject(watch.$resource$);
-    }
+    watch.$el$ = getObject(watch.$el$), watch.$qrl$ = getObject(watch.$qrl$), watch.$resource$ && (watch.$resource$ = getObject(watch.$resource$));
   }
 };
 const ResourceSerializer = {
   prefix: "",
   test: (v) => isResourceReturn(v),
-  serialize: (obj, getObjId) => {
-    return serializeResource(obj, getObjId);
-  },
-  prepare: (data2) => {
-    return parseResourceReturn(data2);
-  },
+  serialize: (obj, getObjId) => ((resource, getObjId2) => {
+    const state = resource.state;
+    return "resolved" === state ? `0 ${getObjId2(resource.resolved)}` : "pending" === state ? "1" : `2 ${getObjId2(resource.error)}`;
+  })(obj, getObjId),
+  prepare: (data2) => ((data3) => {
+    const [first, id] = data3.split(" ");
+    const result = _createResourceReturn(void 0);
+    return result.promise = Promise.resolve(), "0" === first ? (result.state = "resolved", result.resolved = id) : "1" === first ? (result.state = "pending", result.promise = new Promise(() => {
+    })) : "2" === first && (result.state = "rejected", result.error = id), result;
+  })(data2),
   fill: (resource, getObject) => {
-    if (resource.state === "resolved") {
-      resource.resolved = getObject(resource.resolved);
-      resource.promise = Promise.resolve(resource.resolved);
-    } else if (resource.state === "rejected") {
+    if ("resolved" === resource.state) {
+      resource.resolved = getObject(resource.resolved), resource.promise = Promise.resolve(resource.resolved);
+    } else if ("rejected" === resource.state) {
       const p = Promise.reject(resource.error);
-      p.catch(() => null);
-      resource.error = getObject(resource.error);
-      resource.promise = p;
+      p.catch(() => null), resource.error = getObject(resource.error), resource.promise = p;
     }
   }
 };
@@ -3274,13 +2041,10 @@ const RegexSerializer = {
 const ErrorSerializer = {
   prefix: "",
   test: (v) => v instanceof Error,
-  serialize: (obj) => {
-    return obj.message;
-  },
+  serialize: (obj) => obj.message,
   prepare: (text) => {
     const err = new Error(text);
-    err.stack = void 0;
-    return err;
+    return err.stack = void 0, err;
   },
   fill: void 0
 };
@@ -3288,9 +2052,7 @@ const DocumentSerializer = {
   prefix: "",
   test: (v) => isDocument(v),
   serialize: void 0,
-  prepare: (_, _c, doc) => {
-    return doc;
-  },
+  prepare: (_, _c, doc) => doc,
   fill: void 0
 };
 const SERIALIZABLE_STATE = Symbol("serializable-data");
@@ -3300,201 +2062,85 @@ const ComponentSerializer = {
   serialize: (obj, getObjId, containerState) => {
     const [qrl] = obj[SERIALIZABLE_STATE];
     return stringifyQRL(qrl, {
-      $platform$: containerState.$platform$,
       $getObjId$: getObjId
     });
   },
   prepare: (data2, containerState) => {
     const optionsIndex = data2.indexOf("{");
-    const qrlString = optionsIndex == -1 ? data2 : data2.slice(0, optionsIndex);
+    const qrlString = -1 == optionsIndex ? data2 : data2.slice(0, optionsIndex);
     const qrl = parseQRL(qrlString, containerState.$containerEl$);
     return componentQrl(qrl);
   },
   fill: (component, getObject) => {
     const [qrl] = component[SERIALIZABLE_STATE];
-    if (qrl.$capture$ && qrl.$capture$.length > 0) {
-      qrl.$captureRef$ = qrl.$capture$.map(getObject);
-      qrl.$capture$ = null;
-    }
+    qrl.$capture$ && qrl.$capture$.length > 0 && (qrl.$captureRef$ = qrl.$capture$.map(getObject), qrl.$capture$ = null);
   }
 };
-const PureFunctionSerializer = {
+const serializers = [QRLSerializer, WatchSerializer, ResourceSerializer, URLSerializer, DateSerializer, RegexSerializer, ErrorSerializer, DocumentSerializer, ComponentSerializer, {
   prefix: "",
-  test: (obj) => typeof obj === "function" && obj.__qwik_serializable__ !== void 0,
-  serialize: (obj) => {
-    return obj.toString();
-  },
+  test: (obj) => "function" == typeof obj && void 0 !== obj.__qwik_serializable__,
+  serialize: (obj) => obj.toString(),
   prepare: (data2) => {
     const fn = new Function("return " + data2)();
-    fn.__qwik_serializable__ = true;
-    return fn;
+    return fn.__qwik_serializable__ = true, fn;
   },
   fill: void 0
-};
-const serializers = [
-  QRLSerializer,
-  WatchSerializer,
-  ResourceSerializer,
-  URLSerializer,
-  DateSerializer,
-  RegexSerializer,
-  ErrorSerializer,
-  DocumentSerializer,
-  ComponentSerializer,
-  PureFunctionSerializer
-];
-const canSerialize = (obj) => {
-  for (const s of serializers) {
-    if (s.test(obj)) {
-      return true;
-    }
-  }
-  return false;
-};
+}];
 const serializeValue = (obj, getObjID, containerState) => {
   for (const s of serializers) {
     if (s.test(obj)) {
       let value = s.prefix;
-      if (s.serialize) {
-        value += s.serialize(obj, getObjID, containerState);
-      }
-      return value;
+      return s.serialize && (value += s.serialize(obj, getObjID, containerState)), value;
     }
   }
-  return void 0;
 };
-const createParser = (getObject, containerState, doc) => {
-  const map = /* @__PURE__ */ new Map();
-  return {
-    prepare(data2) {
-      for (const s of serializers) {
-        const prefix = s.prefix;
-        if (data2.startsWith(prefix)) {
-          const value = s.prepare(data2.slice(prefix.length), containerState, doc);
-          if (s.fill) {
-            map.set(value, s);
-          }
-          return value;
-        }
-      }
-      return data2;
-    },
-    fill(obj) {
-      const serializer = map.get(obj);
-      if (serializer) {
-        serializer.fill(obj, getObject, containerState);
-        return true;
-      }
-      return false;
-    }
-  };
-};
-const QObjectRecursive = 1 << 0;
-const QObjectImmutable = 1 << 1;
-const getOrCreateProxy = (target, containerState, flags = 0) => {
-  const proxy = containerState.$proxyMap$.get(target);
-  if (proxy) {
-    return proxy;
-  }
-  return createProxy(target, containerState, flags, void 0);
-};
+const getOrCreateProxy = (target, containerState, flags = 0) => containerState.$proxyMap$.get(target) || createProxy(target, containerState, flags, void 0);
 const createProxy = (target, containerState, flags, subs) => {
-  assertEqual(unwrapProxy(target), target, "Unexpected proxy at this location", target);
-  assertTrue(!containerState.$proxyMap$.has(target), "Proxy was already created", target);
-  if (!isObject(target)) {
-    throw qError(QError_onlyObjectWrapped, target);
-  }
-  if (target.constructor !== Object && !isArray(target)) {
-    throw qError(QError_onlyLiteralWrapped, target);
-  }
+  unwrapProxy(target), containerState.$proxyMap$.has(target);
   const manager = containerState.$subsManager$.$getLocal$(target, subs);
   const proxy = new Proxy(target, new ReadWriteProxyHandler(containerState, manager, flags));
-  containerState.$proxyMap$.set(target, proxy);
-  return proxy;
+  return containerState.$proxyMap$.set(target, proxy), proxy;
 };
 const QOjectTargetSymbol = Symbol();
+const QOjectSubsSymbol = Symbol();
 const QOjectFlagsSymbol = Symbol();
 class ReadWriteProxyHandler {
   constructor($containerState$, $manager$, $flags$) {
-    this.$containerState$ = $containerState$;
-    this.$manager$ = $manager$;
-    this.$flags$ = $flags$;
+    this.$containerState$ = $containerState$, this.$manager$ = $manager$, this.$flags$ = $flags$;
   }
   get(target, prop) {
-    if (typeof prop === "symbol") {
-      if (prop === QOjectTargetSymbol)
-        return target;
-      if (prop === QOjectFlagsSymbol)
-        return this.$flags$;
-      return target[prop];
+    if ("symbol" == typeof prop) {
+      return prop === QOjectTargetSymbol ? target : prop === QOjectFlagsSymbol ? this.$flags$ : prop === QOjectSubsSymbol ? this.$manager$.$subs$ : target[prop];
     }
     let subscriber;
     const invokeCtx = tryGetInvokeContext();
-    const recursive = (this.$flags$ & QObjectRecursive) !== 0;
-    const immutable = (this.$flags$ & QObjectImmutable) !== 0;
-    if (invokeCtx) {
-      subscriber = invokeCtx.$subscriber$;
-    }
+    const recursive = 0 != (1 & this.$flags$);
+    const immutable = 0 != (2 & this.$flags$);
+    invokeCtx && (subscriber = invokeCtx.$subscriber$);
     let value = target[prop];
-    if (isMutable(value)) {
-      value = value.v;
-    } else if (immutable) {
-      subscriber = null;
-    }
-    if (subscriber) {
+    if (isMutable(value) ? value = value.mut : immutable && (subscriber = null), subscriber) {
       const isA = isArray(target);
       this.$manager$.$addSub$(subscriber, isA ? void 0 : prop);
     }
     return recursive ? wrap(value, this.$containerState$) : value;
   }
   set(target, prop, newValue) {
-    if (typeof prop === "symbol") {
-      target[prop] = newValue;
-      return true;
+    if ("symbol" == typeof prop) {
+      return target[prop] = newValue, true;
     }
-    const immutable = (this.$flags$ & QObjectImmutable) !== 0;
-    if (immutable) {
+    if (0 != (2 & this.$flags$)) {
       throw qError(QError_immutableProps);
     }
-    const recursive = (this.$flags$ & QObjectRecursive) !== 0;
-    const unwrappedNewValue = recursive ? unwrapProxy(newValue) : newValue;
-    if (qDev$1) {
-      verifySerializable(unwrappedNewValue);
-      const invokeCtx = tryGetInvokeContext();
-      if (invokeCtx && invokeCtx.$event$ === RenderEvent) {
-        logWarn("State mutation inside render function. Move mutation to useWatch(), useClientEffect() or useServerMount()", invokeCtx.$hostElement$, prop);
-      }
-    }
-    const isA = isArray(target);
-    if (isA) {
-      target[prop] = unwrappedNewValue;
-      this.$manager$.$notifySubs$();
-      return true;
-    }
-    const oldValue = target[prop];
-    if (oldValue !== unwrappedNewValue) {
-      target[prop] = unwrappedNewValue;
-      this.$manager$.$notifySubs$(prop);
-    }
-    return true;
+    const unwrappedNewValue = 0 != (1 & this.$flags$) ? unwrapProxy(newValue) : newValue;
+    return isArray(target) ? (target[prop] = unwrappedNewValue, this.$manager$.$notifySubs$(), true) : (target[prop] !== unwrappedNewValue && (target[prop] = unwrappedNewValue, this.$manager$.$notifySubs$(prop)), true);
   }
   has(target, property) {
-    if (property === QOjectTargetSymbol)
-      return true;
-    if (property === QOjectFlagsSymbol)
-      return true;
-    return Object.prototype.hasOwnProperty.call(target, property);
+    return property === QOjectTargetSymbol || property === QOjectFlagsSymbol || Object.prototype.hasOwnProperty.call(target, property);
   }
   ownKeys(target) {
     let subscriber = null;
     const invokeCtx = tryGetInvokeContext();
-    if (invokeCtx) {
-      subscriber = invokeCtx.$subscriber$;
-    }
-    if (subscriber) {
-      this.$manager$.$addSub$(subscriber);
-    }
-    return Object.getOwnPropertyNames(target);
+    return invokeCtx && (subscriber = invokeCtx.$subscriber$), subscriber && this.$manager$.$addSub$(subscriber), Object.getOwnPropertyNames(target);
   }
 }
 const wrap = (value, containerState) => {
@@ -3506,175 +2152,213 @@ const wrap = (value, containerState) => {
       return value;
     }
     const nakedValue = unwrapProxy(value);
-    if (nakedValue !== value) {
-      return value;
-    }
-    if (isNode(nakedValue)) {
-      return value;
-    }
-    if (!shouldSerialize(nakedValue)) {
-      return value;
-    }
-    if (qDev$1) {
-      verifySerializable(value);
-    }
-    const proxy = containerState.$proxyMap$.get(value);
-    return proxy ? proxy : getOrCreateProxy(value, containerState, QObjectRecursive);
-  } else {
-    return value;
-  }
-};
-const verifySerializable = (value) => {
-  const seen = /* @__PURE__ */ new Set();
-  return _verifySerializable(value, seen);
-};
-const _verifySerializable = (value, seen) => {
-  const unwrapped = unwrapProxy(value);
-  if (unwrapped == null) {
-    return value;
-  }
-  if (shouldSerialize(unwrapped)) {
-    if (seen.has(unwrapped)) {
-      return value;
-    }
-    seen.add(unwrapped);
-    if (canSerialize(unwrapped)) {
-      return value;
-    }
-    switch (typeof unwrapped) {
-      case "object":
-        if (isPromise(unwrapped))
-          return value;
-        if (isQwikElement(unwrapped))
-          return value;
-        if (isDocument(unwrapped))
-          return value;
-        if (isArray(unwrapped)) {
-          for (const item of unwrapped) {
-            _verifySerializable(item, seen);
-          }
-          return value;
-        }
-        if (isSerializableObject(unwrapped)) {
-          for (const item of Object.values(unwrapped)) {
-            _verifySerializable(item, seen);
-          }
-          return value;
-        }
-        break;
-      case "boolean":
-      case "string":
-      case "number":
-        return value;
-    }
-    throw qError(QError_verifySerializable, unwrapped);
+    return nakedValue !== value || isNode(nakedValue) ? value : shouldSerialize(nakedValue) ? containerState.$proxyMap$.get(value) || getOrCreateProxy(value, containerState, 1) : value;
   }
   return value;
 };
 const noSerializeSet = /* @__PURE__ */ new WeakSet();
-const shouldSerialize = (obj) => {
-  if (isObject(obj) || isFunction(obj)) {
-    return !noSerializeSet.has(obj);
+const shouldSerialize = (obj) => !isObject(obj) && !isFunction(obj) || !noSerializeSet.has(obj);
+const fastShouldSerialize = (obj) => !noSerializeSet.has(obj);
+const noSerialize = (input) => (null != input && noSerializeSet.add(input), input);
+const mutable = (v) => new MutableImpl(v);
+class MutableImpl {
+  constructor(mut) {
+    this.mut = mut;
   }
-  return true;
-};
-const noSerialize = (input) => {
-  if (input != null) {
-    noSerializeSet.add(input);
-  }
-  return input;
-};
-const mutable = (v) => {
-  return {
-    [MUTABLE]: true,
-    v
-  };
-};
-const isConnected = (sub) => {
-  if (isQwikElement(sub)) {
-    return !!tryGetContext(sub) || sub.isConnected;
-  } else {
-    return isConnected(sub.$el$);
-  }
-};
-const MUTABLE = Symbol("mutable");
-const isMutable = (v) => {
-  return isObject(v) && v[MUTABLE] === true;
-};
+}
+const isMutable = (v) => v instanceof MutableImpl;
 const unwrapProxy = (proxy) => {
   var _a;
-  return (_a = getProxyTarget(proxy)) != null ? _a : proxy;
+  return isObject(proxy) ? (_a = getProxyTarget(proxy)) != null ? _a : proxy : proxy;
 };
-const getProxyTarget = (obj) => {
-  if (isObject(obj)) {
-    return obj[QOjectTargetSymbol];
-  }
-  return void 0;
-};
+const getProxyTarget = (obj) => obj[QOjectTargetSymbol];
+const getProxySubs = (obj) => obj[QOjectSubsSymbol];
 const getProxyFlags = (obj) => {
   if (isObject(obj)) {
     return obj[QOjectFlagsSymbol];
   }
-  return void 0;
 };
-const Q_CTX = "_qc_";
 const resumeIfNeeded = (containerEl) => {
-  const isResumed = directGetAttribute(containerEl, QContainerAttr);
-  if (isResumed === "paused") {
-    resumeContainer(containerEl);
-    if (qDev$1) {
-      appendQwikDevTools(containerEl);
+  "paused" === directGetAttribute(containerEl, "q:container") && (((containerEl2) => {
+    if (!isContainer(containerEl2)) {
+      return void logWarn();
     }
-  }
+    const doc = getDocument(containerEl2);
+    const script = ((parentElm) => {
+      let child = parentElm.lastElementChild;
+      for (; child; ) {
+        if ("SCRIPT" === child.tagName && "qwik/json" === directGetAttribute(child, "type")) {
+          return child;
+        }
+        child = child.previousElementSibling;
+      }
+    })(containerEl2 === doc.documentElement ? doc.body : containerEl2);
+    if (!script) {
+      return void logWarn();
+    }
+    script.remove();
+    const containerState = getContainerState(containerEl2);
+    ((containerEl3, containerState2) => {
+      const head2 = containerEl3.ownerDocument.head;
+      containerEl3.querySelectorAll("style[q\\:style]").forEach((el2) => {
+        containerState2.$styleIds$.add(directGetAttribute(el2, "q:style")), head2.appendChild(el2);
+      });
+    })(containerEl2, containerState);
+    const meta = JSON.parse((script.textContent || "{}").replace(/\\x3C(\/?script)/g, "<$1"));
+    const elements = /* @__PURE__ */ new Map();
+    const getObject = (id) => ((id2, elements2, objs, containerState2) => {
+      if ("string" == typeof id2 && id2.length, id2.startsWith("#")) {
+        return elements2.has(id2), elements2.get(id2);
+      }
+      const index2 = strToInt(id2);
+      objs.length;
+      let obj = objs[index2];
+      for (let i = id2.length - 1; i >= 0; i--) {
+        const code = id2[i];
+        const transform = OBJECT_TRANSFORMS[code];
+        if (!transform) {
+          break;
+        }
+        obj = transform(obj, containerState2);
+      }
+      return obj;
+    })(id, elements, meta.objs, containerState);
+    let maxId = 0;
+    getNodesInScope(containerEl2, hasQId).forEach((el2) => {
+      const id = directGetAttribute(el2, "q:id");
+      const ctx = getContext(el2);
+      ctx.$id$ = id, isElement(el2) && (ctx.$vdom$ = domToVnode(el2)), elements.set("#" + id, el2), maxId = Math.max(maxId, strToInt(id));
+    }), containerState.$elementIndex$ = ++maxId;
+    const parser = ((getObject2, containerState2, doc2) => {
+      const map = /* @__PURE__ */ new Map();
+      return {
+        prepare(data2) {
+          for (const s of serializers) {
+            const prefix = s.prefix;
+            if (data2.startsWith(prefix)) {
+              const value = s.prepare(data2.slice(prefix.length), containerState2, doc2);
+              return s.fill && map.set(value, s), value;
+            }
+          }
+          return data2;
+        },
+        fill(obj) {
+          const serializer = map.get(obj);
+          return !!serializer && (serializer.fill(obj, getObject2, containerState2), true);
+        }
+      };
+    })(getObject, containerState, doc);
+    ((objs, subs, getObject2, containerState2, parser2) => {
+      for (let i = 0; i < objs.length; i++) {
+        const value = objs[i];
+        isString(value) && (objs[i] = value === UNDEFINED_PREFIX ? void 0 : parser2.prepare(value));
+      }
+      for (let i = 0; i < subs.length; i++) {
+        const value = objs[i];
+        const sub = subs[i];
+        if (sub) {
+          const converted = /* @__PURE__ */ new Map();
+          let flags = 0;
+          for (const key of Object.keys(sub)) {
+            const v = sub[key];
+            if ("$" === key) {
+              flags = v;
+              continue;
+            }
+            const el2 = getObject2(key);
+            if (!el2) {
+              continue;
+            }
+            const set = null === v ? null : new Set(v);
+            converted.set(el2, set);
+          }
+          createProxy(value, containerState2, flags, converted);
+        }
+      }
+    })(meta.objs, meta.subs, getObject, containerState, parser);
+    for (const obj of meta.objs) {
+      reviveNestedObjects(obj, getObject, parser);
+    }
+    for (const elementID of Object.keys(meta.ctx)) {
+      elementID.startsWith("#");
+      const ctxMeta = meta.ctx[elementID];
+      const el2 = elements.get(elementID);
+      const ctx = getContext(el2);
+      const refMap = ctxMeta.r;
+      const seq = ctxMeta.s;
+      const host = ctxMeta.h;
+      const contexts = ctxMeta.c;
+      const watches = ctxMeta.w;
+      if (refMap && (isElement(el2), ctx.$refMap$ = refMap.split(" ").map(getObject), ctx.li = getDomListeners(ctx, containerEl2)), seq && (ctx.$seq$ = seq.split(" ").map(getObject)), watches && (ctx.$watches$ = watches.split(" ").map(getObject)), contexts) {
+        ctx.$contexts$ = /* @__PURE__ */ new Map();
+        for (const part of contexts.split(" ")) {
+          const [key, value] = part.split("=");
+          ctx.$contexts$.set(key, getObject(value));
+        }
+      }
+      if (host) {
+        const [props, renderQrl] = host.split(" ");
+        const styleIds = el2.getAttribute("q:sstyle");
+        ctx.$scopeIds$ = styleIds ? styleIds.split(" ") : null, ctx.$mounted$ = true, ctx.$props$ = getObject(props), ctx.$renderQrl$ = getObject(renderQrl);
+      }
+    }
+    var el;
+    directSetAttribute(containerEl2, "q:container", "resumed"), (el = containerEl2) && "function" == typeof CustomEvent && el.dispatchEvent(new CustomEvent("qresume", {
+      detail: void 0,
+      bubbles: true,
+      composed: true
+    }));
+  })(containerEl), appendQwikDevTools(containerEl));
 };
 const appendQwikDevTools = (containerEl) => {
-  containerEl["qwik"] = {
-    pause: () => pauseContainer(containerEl),
+  containerEl.qwik = {
+    pause: () => (async (elmOrDoc, defaultParentJSON) => {
+      const doc = getDocument(elmOrDoc);
+      const documentElement = doc.documentElement;
+      const containerEl2 = isDocument(elmOrDoc) ? documentElement : elmOrDoc;
+      if ("paused" === directGetAttribute(containerEl2, "q:container")) {
+        throw qError(QError_containerAlreadyPaused);
+      }
+      const parentJSON = containerEl2 === doc.documentElement ? doc.body : containerEl2;
+      const data2 = await (async (containerEl3) => {
+        const containerState = getContainerState(containerEl3);
+        const contexts = getNodesInScope(containerEl3, hasQId).map(tryGetContext);
+        return _pauseFromContexts(contexts, containerState);
+      })(containerEl2);
+      const script = doc.createElement("script");
+      return directSetAttribute(script, "type", "qwik/json"), script.textContent = JSON.stringify(data2.state, void 0, void 0).replace(/<(\/?script)/g, "\\x3C$1"), parentJSON.appendChild(script), directSetAttribute(containerEl2, "q:container", "paused"), data2;
+    })(containerEl),
     state: getContainerState(containerEl)
   };
 };
-const tryGetContext = (element) => {
-  return element[Q_CTX];
-};
+const tryGetContext = (element) => element._qc_;
 const getContext = (element) => {
   let ctx = tryGetContext(element);
-  if (!ctx) {
-    element[Q_CTX] = ctx = {
-      $dirty$: false,
-      $mounted$: false,
-      $attachedListeners$: false,
-      $id$: "",
-      $element$: element,
-      $refMap$: [],
-      li: {},
-      $watches$: null,
-      $seq$: null,
-      $slots$: null,
-      $scopeIds$: null,
-      $appendStyles$: null,
-      $props$: null,
-      $vdom$: null,
-      $renderQrl$: null,
-      $contexts$: null
-    };
-  }
-  return ctx;
+  return ctx || (element._qc_ = ctx = {
+    $dirty$: false,
+    $mounted$: false,
+    $attachedListeners$: false,
+    $id$: "",
+    $element$: element,
+    $refMap$: [],
+    li: {},
+    $watches$: null,
+    $seq$: null,
+    $slots$: null,
+    $scopeIds$: null,
+    $appendStyles$: null,
+    $props$: null,
+    $vdom$: null,
+    $renderQrl$: null,
+    $contexts$: null
+  }), ctx;
 };
 const cleanupContext = (ctx, subsManager) => {
   var _a;
   const el = ctx.$element$;
   (_a = ctx.$watches$) == null ? void 0 : _a.forEach((watch) => {
-    subsManager.$clearSub$(watch);
-    destroyWatch(watch);
-  });
-  if (ctx.$renderQrl$) {
-    subsManager.$clearSub$(el);
-  }
-  ctx.$renderQrl$ = null;
-  ctx.$seq$ = null;
-  ctx.$watches$ = null;
-  ctx.$dirty$ = false;
-  el[Q_CTX] = void 0;
+    subsManager.$clearSub$(watch), destroyWatch(watch);
+  }), ctx.$renderQrl$ && subsManager.$clearSub$(el), ctx.$renderQrl$ = null, ctx.$seq$ = null, ctx.$watches$ = null, ctx.$dirty$ = false, el._qc_ = void 0;
 };
 const PREFIXES = ["on", "window:on", "document:on"];
 const SCOPED = ["on", "on-window", "on-document"];
@@ -3683,244 +2367,96 @@ const normalizeOnProp = (prop) => {
   for (let i = 0; i < PREFIXES.length; i++) {
     const prefix = PREFIXES[i];
     if (prop.startsWith(prefix)) {
-      scope = SCOPED[i];
-      prop = prop.slice(prefix.length);
+      scope = SCOPED[i], prop = prop.slice(prefix.length);
       break;
     }
   }
-  if (prop.startsWith("-")) {
-    prop = fromCamelToKebabCase(prop.slice(1));
-  } else {
-    prop = prop.toLowerCase();
-  }
-  return scope + ":" + prop;
+  return scope + ":" + (prop.startsWith("-") ? fromCamelToKebabCase(prop.slice(1)) : prop.toLowerCase());
 };
-const createProps = (target, containerState) => {
-  return createProxy(target, containerState, QObjectImmutable);
-};
+const createProps = (target, containerState) => createProxy(target, containerState, 2);
 const getPropsMutator = (ctx, containerState) => {
   let props = ctx.$props$;
-  if (!ctx.$props$) {
-    ctx.$props$ = props = createProps({}, containerState);
-  }
+  props || (ctx.$props$ = props = createProps({}, containerState));
   const target = getProxyTarget(props);
-  assertDefined(target, `props have to be a proxy, but it is not`, props);
   const manager = containerState.$subsManager$.$getLocal$(target);
   return {
     set(prop, value) {
-      var _a, _b;
-      const didSet = prop in target;
       let oldValue = target[prop];
-      let mut = false;
-      if (isMutable(oldValue)) {
-        oldValue = oldValue.v;
-      }
-      if (containerState.$mutableProps$) {
-        mut = true;
-        if (isMutable(value)) {
-          value = value.v;
-          target[prop] = value;
-        } else {
-          target[prop] = mutable(value);
-        }
-      } else {
-        target[prop] = value;
-        if (isMutable(value)) {
-          value = value.v;
-          mut = true;
-        }
-      }
-      if (oldValue !== value) {
-        if (qDev$1) {
-          if (didSet && !mut && !isQrl$1(value)) {
-            const displayName = (_b = (_a = ctx.$renderQrl$) == null ? void 0 : _a.getSymbol()) != null ? _b : ctx.$element$.localName;
-            logError(codeToText(QError_immutableJsxProps), `If you need to change a value of a passed in prop, please wrap the prop with "mutable()" <${displayName} ${prop}={mutable(...)}>`, "\n - Component:", displayName, "\n - Prop:", prop, "\n - Old value:", oldValue, "\n - New value:", value);
-          }
-        }
-        manager.$notifySubs$(prop);
-      }
+      isMutable(oldValue) && (oldValue = oldValue.mut), containerState.$mutableProps$ ? isMutable(value) ? (value = value.mut, target[prop] = value) : target[prop] = mutable(value) : (target[prop] = value, isMutable(value) && (value = value.mut, true)), oldValue !== value && manager.$notifySubs$(prop);
     }
   };
 };
-const inflateQrl = (qrl, elCtx) => {
-  assertDefined(qrl.$capture$, "invoke: qrl capture must be defined inside useLexicalScope()", qrl);
-  return qrl.$captureRef$ = qrl.$capture$.map((idx) => {
-    const int = parseInt(idx, 10);
-    const obj = elCtx.$refMap$[int];
-    assertTrue(elCtx.$refMap$.length > int, "out of bounds inflate access", idx);
-    return obj;
-  });
-};
-const STYLE = qDev$1 ? `background: #564CE0; color: white; padding: 2px 3px; border-radius: 2px; font-size: 0.8em;` : "";
+const inflateQrl = (qrl, elCtx) => (qrl.$capture$, qrl.$captureRef$ = qrl.$capture$.map((idx) => {
+  const int = parseInt(idx, 10);
+  const obj = elCtx.$refMap$[int];
+  return elCtx.$refMap$.length, obj;
+}));
 const logError = (message, ...optionalParams) => {
   const err = message instanceof Error ? message : new Error(message);
-  console.error("%cQWIK ERROR", STYLE, err.message, ...printParams(optionalParams), err.stack);
-  return err;
+  return "function" == typeof globalThis._handleError && message instanceof Error ? globalThis._handleError(message, optionalParams) : console.error("%cQWIK ERROR", "", err.message, ...printParams(optionalParams), err.stack), err;
 };
-const logErrorAndStop = (message, ...optionalParams) => {
-  const err = logError(message, ...optionalParams);
-  debugger;
-  return err;
-};
+const logErrorAndStop = (message, ...optionalParams) => logError(message, ...optionalParams);
 const logWarn = (message, ...optionalParams) => {
-  if (qDev$1) {
-    console.warn("%cQWIK WARN", STYLE, message, ...printParams(optionalParams));
-  }
 };
-const logDebug = (message, ...optionalParams) => {
-  if (qDev$1) {
-    console.debug("%cQWIK", STYLE, message, ...printParams(optionalParams));
-  }
-};
-const printParams = (optionalParams) => {
-  if (qDev$1) {
-    return optionalParams.map((p) => {
-      if (isNode$1(p) && isElement(p)) {
-        return printElement(p);
-      }
-      return p;
-    });
-  }
-  return optionalParams;
-};
-const printElement = (el) => {
-  var _a;
-  const ctx = tryGetContext(el);
-  const isServer2 = /* @__PURE__ */ (() => typeof process !== "undefined" && !!process.versions && !!process.versions.node)();
-  return {
-    tagName: el.tagName,
-    renderQRL: (_a = ctx == null ? void 0 : ctx.$renderQrl$) == null ? void 0 : _a.getSymbol(),
-    element: isServer2 ? void 0 : el,
-    ctx: isServer2 ? void 0 : ctx
-  };
-};
+const printParams = (optionalParams) => optionalParams;
 const QError_stringifyClassOrStyle = 0;
-const QError_runtimeQrlNoElement = 2;
 const QError_verifySerializable = 3;
-const QError_errorWhileRendering = 4;
 const QError_setProperty = 6;
-const QError_onlyObjectWrapped = 8;
-const QError_onlyLiteralWrapped = 9;
-const QError_qrlIsNotFunction = 10;
 const QError_notFoundContext = 13;
 const QError_useMethodOutsideContext = 14;
 const QError_immutableProps = 17;
-const QError_immutableJsxProps = 19;
 const QError_useInvokeContext = 20;
 const QError_containerAlreadyPaused = 21;
 const QError_invalidJsxNodeType = 25;
 const QError_trackUseStore = 26;
 const QError_missingObjectId = 27;
-const QError_invalidContext = 28;
-const QError_canNotRenderHTML = 29;
 const qError = (code, ...parts) => {
   const text = codeToText(code);
   return logErrorAndStop(text, ...parts);
 };
-const codeToText = (code) => {
-  var _a;
-  if (qDev$1) {
-    const MAP = [
-      "Error while serializing class attribute",
-      "Can not serialize a HTML Node that is not an Element",
-      "Rruntime but no instance found on element.",
-      "Only primitive and object literals can be serialized",
-      "Crash while rendering",
-      "You can render over a existing q:container. Skipping render().",
-      "Set property",
-      "Only function's and 'string's are supported.",
-      "Only objects can be wrapped in 'QObject'",
-      `Only objects literals can be wrapped in 'QObject'`,
-      "QRL is not a function",
-      "Dynamic import not found",
-      "Unknown type argument",
-      "Actual value for useContext() can not be found, make sure some ancestor component has set a value using useContextProvider()",
-      "Invoking 'use*()' method outside of invocation context.",
-      "Cant access renderCtx for existing context",
-      "Cant access document for existing context",
-      "props are inmutable",
-      "<div> component can only be used at the root of a Qwik component$()",
-      "Props are immutable by default.",
-      "use- method must be called only at the root level of a component$()",
-      "Container is already paused. Skipping",
-      'Components using useServerMount() can only be mounted in the server, if you need your component to be mounted in the client, use "useMount$()" instead',
-      "When rendering directly on top of Document, the root node must be a <html>",
-      "A <html> node must have 2 children. The first one <head> and the second one a <body>",
-      "Invalid JSXNode type. It must be either a function or a string. Found:",
-      "Tracking value changes can only be done to useStore() objects and component props",
-      "Missing Object ID for captured object",
-      "The provided Context reference is not a valid context created by createContext()",
-      "<html> is the root container, it can not be rendered inside a component"
-    ];
-    return `Code(${code}): ${(_a = MAP[code]) != null ? _a : ""}`;
-  } else {
-    return `Code(${code})`;
-  }
-};
-const isQrl$1 = (value) => {
-  return typeof value === "function" && typeof value.getSymbol === "function";
-};
+const codeToText = (code) => `Code(${code})`;
+const isQrl$1 = (value) => "function" == typeof value && "function" == typeof value.getSymbol;
 const createQRL = (chunk, symbol, symbolRef, symbolFn, capture, captureRef, refSymbol) => {
-  if (qDev$1) {
-    verifySerializable(captureRef);
-  }
-  let containerEl;
+  let _containerEl;
   const setContainer = (el) => {
-    if (!containerEl) {
-      containerEl = el;
-    }
+    _containerEl || (_containerEl = el);
   };
-  const resolve = async () => {
-    if (symbolRef) {
+  const resolve = async (containerEl) => {
+    if (containerEl && setContainer(containerEl), symbolRef) {
       return symbolRef;
     }
     if (symbolFn) {
       return symbolRef = symbolFn().then((module) => symbolRef = module[symbol]);
-    } else {
-      if (!containerEl) {
+    }
+    {
+      if (!_containerEl) {
         throw new Error(`QRL '${chunk}#${symbol || "default"}' does not have an attached container`);
       }
-      const symbol2 = getPlatform(containerEl).importSymbol(containerEl, chunk, symbol);
-      return symbolRef = then(symbol2, (ref) => {
-        return symbolRef = ref;
-      });
+      const symbol2 = getPlatform().importSymbol(_containerEl, chunk, symbol);
+      return symbolRef = then(symbol2, (ref) => symbolRef = ref);
     }
   };
-  const resolveLazy = () => {
-    return isFunction(symbolRef) ? symbolRef : resolve();
-  };
-  const invokeFn = (currentCtx, beforeFn) => {
-    return (...args) => {
-      const fn = resolveLazy();
-      return then(fn, (fn2) => {
-        if (isFunction(fn2)) {
-          if (beforeFn && beforeFn() === false) {
-            return;
-          }
-          const baseContext = createInvokationContext(currentCtx);
-          const context = {
-            ...baseContext,
-            $qrl$: QRL
-          };
-          return invoke(context, fn2, ...args);
+  const resolveLazy = (containerEl) => symbolRef || resolve(containerEl);
+  const invokeFn = (currentCtx, beforeFn) => (...args) => {
+    const fn = resolveLazy();
+    return then(fn, (fn2) => {
+      if (isFunction(fn2)) {
+        if (beforeFn && false === beforeFn()) {
+          return;
         }
-        throw qError(QError_qrlIsNotFunction);
-      });
-    };
+        const context = {
+          ...createInvokationContext(currentCtx),
+          $qrl$: QRL
+        };
+        return emitUsedSymbol(symbol, context.$element$), invoke(context, fn2, ...args);
+      }
+      throw qError(10);
+    });
   };
-  const createInvokationContext = (invoke2) => {
-    if (invoke2 == null) {
-      return newInvokeContext();
-    } else if (isArray(invoke2)) {
-      return newInvokeContextFromTuple(invoke2);
-    } else {
-      return invoke2;
-    }
-  };
+  const createInvokationContext = (invoke2) => null == invoke2 ? newInvokeContext() : isArray(invoke2) ? newInvokeContextFromTuple(invoke2) : invoke2;
   const invokeQRL = async function(...args) {
     const fn = invokeFn();
-    const result = await fn(...args);
-    return result;
+    return await fn(...args);
   };
   const resolvedSymbol = refSymbol != null ? refSymbol : symbol;
   const hash = getSymbolHash$1(resolvedSymbol);
@@ -3939,60 +2475,37 @@ const createQRL = (chunk, symbol, symbolRef, symbolFn, capture, captureRef, refS
     $capture$: capture,
     $captureRef$: captureRef
   };
-  const qrl = Object.assign(invokeQRL, methods);
-  seal(qrl);
-  return qrl;
+  return Object.assign(invokeQRL, methods);
 };
 const getSymbolHash$1 = (symbolName) => {
   const index2 = symbolName.lastIndexOf("_");
-  if (index2 > -1) {
-    return symbolName.slice(index2 + 1);
-  }
-  return symbolName;
+  return index2 > -1 ? symbolName.slice(index2 + 1) : symbolName;
 };
-function assertQrl(qrl) {
-  if (qDev$1) {
-    if (!isQrl$1(qrl)) {
-      throw new Error("Not a QRL");
+const emitUsedSymbol = (symbol, element) => {
+  isServer$1() || "object" != typeof document || document.dispatchEvent(new CustomEvent("qsymbol", {
+    bubbles: false,
+    detail: {
+      symbol,
+      element,
+      timestamp: performance.now()
     }
-  }
-}
+  }));
+};
 let runtimeSymbolId = 0;
-const RUNTIME_QRL = "/runtimeQRL";
-const INLINED_QRL = "/inlinedQRL";
-const runtimeQrl = (symbol, lexicalScopeCapture = EMPTY_ARRAY$1) => {
-  return createQRL(RUNTIME_QRL, "s" + runtimeSymbolId++, symbol, null, null, lexicalScopeCapture, null);
-};
-const inlinedQrl = (symbol, symbolName, lexicalScopeCapture = EMPTY_ARRAY$1) => {
-  return createQRL(INLINED_QRL, symbolName, symbol, null, null, lexicalScopeCapture, null);
-};
+const inlinedQrl = (symbol, symbolName, lexicalScopeCapture = EMPTY_ARRAY$1) => createQRL("/inlinedQRL", symbolName, symbol, null, null, lexicalScopeCapture, null);
 const stringifyQRL = (qrl, opts = {}) => {
   var _a;
-  assertQrl(qrl);
   let symbol = qrl.$symbol$;
   let chunk = qrl.$chunk$;
   const refSymbol = (_a = qrl.$refSymbol$) != null ? _a : symbol;
-  const platform = opts.$platform$;
-  const element = opts.$element$;
+  const platform = getPlatform();
   if (platform) {
     const result = platform.chunkForSymbol(refSymbol);
-    if (result) {
-      chunk = result[1];
-      if (!qrl.$refSymbol$) {
-        symbol = result[0];
-      }
-    }
+    result && (chunk = result[1], qrl.$refSymbol$ || (symbol = result[0]));
   }
-  if (chunk.startsWith("./")) {
-    chunk = chunk.slice(2);
-  }
+  chunk.startsWith("./") && (chunk = chunk.slice(2));
   const parts = [chunk];
-  if (symbol && symbol !== "default") {
-    if (chunk === RUNTIME_QRL && qTest) {
-      symbol = "_";
-    }
-    parts.push("#", symbol);
-  }
+  symbol && "default" !== symbol && parts.push("#", symbol);
   const capture = qrl.$capture$;
   const captureRef = qrl.$captureRef$;
   if (captureRef && captureRef.length) {
@@ -4003,20 +2516,17 @@ const stringifyQRL = (qrl, opts = {}) => {
       const capture2 = captureRef.map(opts.$addRefMap$);
       parts.push(`[${capture2.join(" ")}]`);
     }
-  } else if (capture && capture.length > 0) {
-    parts.push(`[${capture.join(" ")}]`);
+  } else {
+    capture && capture.length > 0 && parts.push(`[${capture.join(" ")}]`);
   }
-  const qrlString = parts.join("");
-  if (qrl.$chunk$ === RUNTIME_QRL && element) {
-    const qrls = element.__qrls__ || (element.__qrls__ = /* @__PURE__ */ new Set());
-    qrls.add(qrl);
-  }
-  return qrlString;
+  return parts.join("");
 };
 const serializeQRLs = (existingQRLs, elCtx) => {
-  assertTrue(isElement$1(elCtx.$element$), "Element must be an actual element");
+  var value;
+  (function(value2) {
+    return value2 && "number" == typeof value2.nodeType;
+  })(value = elCtx.$element$) && value.nodeType;
   const opts = {
-    $platform$: getPlatform(elCtx.$element$),
     $element$: elCtx.$element$,
     $addRefMap$: (obj) => addToArray(elCtx.$refMap$, obj)
   };
@@ -4034,61 +2544,46 @@ const parseQRL = (qrl, containerEl) => {
   const captureStartIdx = captureIdx;
   const captureEndIdx = endIdx;
   const capture = captureStartIdx === captureEndIdx ? EMPTY_ARRAY$1 : qrl.substring(captureStartIdx + 1, captureEndIdx - 1).split(" ");
-  if (chunk === RUNTIME_QRL) {
-    logError(codeToText(QError_runtimeQrlNoElement), qrl);
-  }
+  "/runtimeQRL" === chunk && logError(codeToText(2), qrl);
   const iQrl = createQRL(chunk, symbol, null, null, capture, null, null);
-  if (containerEl) {
-    iQrl.$setContainer$(containerEl);
-  }
-  return iQrl;
+  return containerEl && iQrl.$setContainer$(containerEl), iQrl;
 };
 const indexOf = (text, startIdx, char) => {
   const endIdx = text.length;
   const charIdx = text.indexOf(char, startIdx == endIdx ? 0 : startIdx);
-  return charIdx == -1 ? endIdx : charIdx;
+  return -1 == charIdx ? endIdx : charIdx;
 };
 const addToArray = (array, obj) => {
   const index2 = array.indexOf(obj);
-  if (index2 === -1) {
-    array.push(obj);
-    return array.length - 1;
-  }
-  return index2;
+  return -1 === index2 ? (array.push(obj), array.length - 1) : index2;
 };
-const $ = (expression) => {
-  return runtimeQrl(expression);
-};
+const $ = (expression) => ((symbol, lexicalScopeCapture = EMPTY_ARRAY$1) => createQRL("/runtimeQRL", "s" + runtimeSymbolId++, symbol, null, null, lexicalScopeCapture, null))(expression);
 const componentQrl = (onRenderQrl) => {
   function QwikComponent(props, key) {
-    assertQrl(onRenderQrl);
-    const hash = qTest ? "sX" : onRenderQrl.$hash$;
-    const finalKey = hash + ":" + (key ? key : "");
-    return jsx(Virtual, { [OnRenderProp]: onRenderQrl, ...props }, finalKey);
+    const hash = onRenderQrl.$hash$;
+    return jsx(Virtual, {
+      "q:renderFn": onRenderQrl,
+      ...props
+    }, hash + ":" + (key || ""));
   }
-  QwikComponent[SERIALIZABLE_STATE] = [onRenderQrl];
-  return QwikComponent;
+  return QwikComponent[SERIALIZABLE_STATE] = [onRenderQrl], QwikComponent;
 };
-const isQwikComponent = (component) => {
-  return typeof component == "function" && component[SERIALIZABLE_STATE] !== void 0;
-};
+const isQwikComponent = (component) => "function" == typeof component && void 0 !== component[SERIALIZABLE_STATE];
 const Slot = (props) => {
   var _a;
   const name = (_a = props.name) != null ? _a : "";
   return jsx(Virtual, {
-    [QSlotS]: ""
+    "q:s": ""
   }, name);
 };
-const version = "0.0.108";
-const IS_HEAD = 1 << 0;
-const IS_RAW_CONTENT = 1 << 1;
-const IS_HTML = 1 << 2;
-const renderSSR = async (doc, node, opts) => {
+const renderSSR = async (node, opts) => {
   var _a;
   const root = opts.containerTagName;
-  const containerEl = doc.createElement(root);
-  const containerState = getContainerState(containerEl);
-  const rctx = createRenderContext(doc, containerState);
+  const containerEl = createContext(1).$element$;
+  const containerState = createContainerState(containerEl);
+  const rctx = createRenderContext({
+    nodeType: 9
+  }, containerState);
   const headNodes = (_a = opts.beforeContent) != null ? _a : [];
   const ssrCtx = {
     rctx,
@@ -4097,310 +2592,123 @@ const renderSSR = async (doc, node, opts) => {
     projectedContext: void 0,
     hostCtx: void 0,
     invocationContext: void 0,
-    headNodes: root === "html" ? headNodes : []
+    headNodes: "html" === root ? headNodes : []
   };
   const containerAttributes = {
     ...opts.containerAttributes,
     "q:container": "paused",
-    "q:version": version,
-    "q:render": qDev$1 ? "ssr-dev" : "ssr"
+    "q:version": "0.9.0",
+    "q:render": "ssr",
+    "q:base": opts.base,
+    children: "html" === root ? [node] : [headNodes, node]
   };
-  if (opts.base) {
-    containerAttributes["q:base"] = opts.base;
-  }
-  if (opts.url) {
-    containerState.$envData$["url"] = opts.url;
-  }
-  if (opts.envData) {
-    Object.assign(containerState.$envData$, opts.envData);
-  }
-  if (root === "html") {
-    node = jsx(root, {
-      ...containerAttributes,
-      children: [node]
-    });
-  } else {
-    node = jsx(root, {
-      ...containerAttributes,
-      children: [...headNodes != null ? headNodes : [], node]
-    });
-  }
-  containerState.$hostsRendering$ = /* @__PURE__ */ new Set();
-  containerState.$renderPromise$ = Promise.resolve().then(() => renderRoot(node, ssrCtx, opts.stream, containerState, opts));
-  await containerState.$renderPromise$;
+  containerState.$envData$ = {
+    url: opts.url,
+    ...opts.envData
+  }, node = jsx(root, containerAttributes), containerState.$hostsRendering$ = /* @__PURE__ */ new Set(), containerState.$renderPromise$ = Promise.resolve().then(() => renderRoot(node, ssrCtx, opts.stream, containerState, opts)), await containerState.$renderPromise$;
 };
 const renderRoot = async (node, ssrCtx, stream, containerState, opts) => {
   const beforeClose = opts.beforeClose;
-  await renderNode(node, ssrCtx, stream, 0, (stream2) => {
-    const result = beforeClose == null ? void 0 : beforeClose(ssrCtx.$contexts$, containerState);
-    if (result) {
-      return processData(result, ssrCtx, stream2, 0, void 0);
-    }
-  });
-  if (qDev$1) {
-    if (ssrCtx.headNodes.length > 0) {
-      logError("Missing <head>. Global styles could not be rendered. Please render a <head> element at the root of the app");
-    }
-  }
-  return ssrCtx.rctx.$static$;
-};
-const renderNodeFunction = (node, ssrCtx, stream, flags, beforeClose) => {
-  var _a;
-  const fn = node.type;
-  if (fn === SSRComment) {
-    stream.write(`<!--${(_a = node.props.data) != null ? _a : ""}-->`);
-    return;
-  }
-  if (fn === InternalSSRStream) {
-    return renderGenerator(node, ssrCtx, stream, flags);
-  }
-  if (fn === Virtual) {
-    const elCtx = getContext(ssrCtx.rctx.$static$.$doc$.createElement(VIRTUAL));
-    return renderNodeVirtual(node, elCtx, void 0, ssrCtx, stream, flags, beforeClose);
-  }
-  const res = ssrCtx.invocationContext ? invoke(ssrCtx.invocationContext, () => node.type(node.props, node.key)) : node.type(node.props, node.key);
-  return processData(res, ssrCtx, stream, flags, beforeClose);
-};
-const renderGenerator = async (node, ssrCtx, stream, flags) => {
-  const generator = node.props.children;
-  let value;
-  if (isFunction(generator)) {
-    const v = generator(stream);
-    if (isPromise(v)) {
-      return v;
-    }
-    value = v;
-  } else {
-    value = generator;
-  }
-  for await (const chunk of value) {
-    await processData(chunk, ssrCtx, stream, flags, void 0);
-  }
+  return await renderNode(node, ssrCtx, stream, 0, beforeClose ? (stream2) => {
+    const result = beforeClose(ssrCtx.$contexts$, containerState);
+    return processData(result, ssrCtx, stream2, 0, void 0);
+  } : void 0), ssrCtx.rctx.$static$;
 };
 const renderNodeVirtual = (node, elCtx, extraNodes, ssrCtx, stream, flags, beforeClose) => {
   var _a;
   const props = node.props;
-  const renderQrl = props[OnRenderProp];
+  const renderQrl = props["q:renderFn"];
   if (renderQrl) {
-    elCtx.$renderQrl$ = renderQrl;
-    return renderSSRComponent(ssrCtx, stream, elCtx, node, flags, beforeClose);
+    return elCtx.$renderQrl$ = renderQrl, renderSSRComponent(ssrCtx, stream, elCtx, node, flags, beforeClose);
   }
-  const { children, ...attributes } = node.props;
-  const isSlot = QSlotS in props;
-  const key = node.key != null ? String(node.key) : null;
-  if (isSlot) {
-    assertDefined((_a = ssrCtx.hostCtx) == null ? void 0 : _a.$id$, "hostId must be defined for a slot");
-    attributes[QSlotRef] = ssrCtx.hostCtx.$id$;
-  }
-  if (key != null) {
-    attributes["q:key"] = key;
-  }
-  const url = new Map(Object.entries(attributes));
-  stream.write(`<!--qv ${serializeVirtualAttributes(url)}-->`);
-  if (extraNodes) {
+  let virtualComment = "<!--qv" + renderVirtualAttributes(props);
+  const isSlot = "q:s" in props;
+  const key = null != node.key ? String(node.key) : null;
+  if (isSlot && ((_a = ssrCtx.hostCtx) == null ? void 0 : _a.$id$, virtualComment += " q:sref=" + ssrCtx.hostCtx.$id$), null != key && (virtualComment += " q:key=" + key), virtualComment += "-->", stream.write(virtualComment), extraNodes) {
     for (const node2 of extraNodes) {
       renderNodeElementSync(node2.type, node2.props, stream);
     }
   }
-  const promise = processData(props.children, ssrCtx, stream, flags);
+  const promise = walkChildren(props.children, ssrCtx, stream, flags);
   return then(promise, () => {
     var _a2;
     if (!isSlot && !beforeClose) {
-      stream.write(CLOSE_VIRTUAL);
-      return;
+      return void stream.write(CLOSE_VIRTUAL);
     }
     let promise2;
     if (isSlot) {
-      assertDefined(key, "key must be defined for a slot");
       const content = (_a2 = ssrCtx.projectedChildren) == null ? void 0 : _a2[key];
-      if (content) {
-        ssrCtx.projectedChildren[key] = void 0;
-        promise2 = processData(content, ssrCtx.projectedContext, stream, flags);
-      }
+      content && (ssrCtx.projectedChildren[key] = void 0, promise2 = processData(content, ssrCtx.projectedContext, stream, flags));
     }
-    if (beforeClose) {
-      promise2 = then(promise2, () => beforeClose(stream));
-    }
-    return then(promise2, () => {
+    return beforeClose && (promise2 = then(promise2, () => beforeClose(stream))), then(promise2, () => {
       stream.write(CLOSE_VIRTUAL);
     });
   });
 };
-const CLOSE_VIRTUAL = `<!--/qv-->`;
-const renderNodeElement = (node, extraAttributes, extraNodes, ssrCtx, stream, flags, beforeClose) => {
-  const key = node.key != null ? String(node.key) : null;
-  const props = node.props;
-  const textType = node.type;
-  const elCtx = getContext(ssrCtx.rctx.$static$.$doc$.createElement(node.type));
-  const hasRef = "ref" in props;
-  const attributes = updateProperties(elCtx, props);
-  const hostCtx = ssrCtx.hostCtx;
-  if (hostCtx) {
-    if (textType === "html") {
-      throw qError(QError_canNotRenderHTML);
+const CLOSE_VIRTUAL = "<!--/qv-->";
+const renderVirtualAttributes = (attributes) => {
+  let text = "";
+  for (const prop of Object.keys(attributes)) {
+    if ("children" === prop) {
+      continue;
     }
-    attributes["class"] = joinClasses(hostCtx.$scopeIds$, attributes["class"]);
-    const cmp = hostCtx;
-    if (!cmp.$attachedListeners$) {
-      cmp.$attachedListeners$ = true;
-      Object.entries(hostCtx.li).forEach(([eventName, qrls]) => {
-        addQRLListener(elCtx.li, eventName, qrls);
-      });
-    }
+    const value = attributes[prop];
+    null != value && (text += " " + ("" === value ? prop : prop + "=" + value));
   }
-  if (textType === "head") {
-    flags |= IS_HEAD;
-  }
-  const listeners = Object.entries(elCtx.li);
-  const isHead = flags & IS_HEAD;
-  if (key != null) {
-    attributes["q:key"] = key;
-  }
-  if (hasRef || listeners.length > 0) {
-    const newID = getNextIndex(ssrCtx.rctx);
-    attributes[ELEMENT_ID] = newID;
-    elCtx.$id$ = newID;
-    ssrCtx.$contexts$.push(elCtx);
-  }
-  if (isHead) {
-    attributes["q:head"] = "";
-  }
-  if (extraAttributes) {
-    Object.assign(attributes, extraAttributes);
-  }
-  listeners.forEach(([key2, value]) => {
-    attributes[key2] = serializeQRLs(value, elCtx);
-  });
-  if (renderNodeElementSync(textType, attributes, stream)) {
-    return;
-  }
-  if (textType !== "head") {
-    flags &= ~IS_HEAD;
-  }
-  if (textType === "html") {
-    flags |= IS_HTML;
-  } else {
-    flags &= ~IS_HTML;
-  }
-  if (hasRawContent[textType]) {
-    flags |= IS_RAW_CONTENT;
-  } else {
-    flags &= ~IS_RAW_CONTENT;
-  }
-  if (extraNodes) {
-    for (const node2 of extraNodes) {
-      renderNodeElementSync(node2.type, node2.props, stream);
-    }
-  }
-  const promise = processData(props.children, ssrCtx, stream, flags);
-  return then(promise, () => {
-    if (textType === "head") {
-      ssrCtx.headNodes.forEach((node2) => {
-        renderNodeElementSync(node2.type, node2.props, stream);
-      });
-      ssrCtx.headNodes.length = 0;
-    }
-    if (!beforeClose) {
-      stream.write(`</${textType}>`);
-      return;
-    }
-    return then(beforeClose(stream), () => {
-      stream.write(`</${textType}>`);
-    });
-  });
+  return text;
 };
 const renderNodeElementSync = (tagName, attributes, stream) => {
-  stream.write(`<${tagName}`);
-  Object.entries(attributes).forEach(([key, value]) => {
-    if (key !== "dangerouslySetInnerHTML" && key !== "children") {
-      if (key === "class" && !value) {
-        return;
+  if (stream.write("<" + tagName + ((attributes2) => {
+    let text = "";
+    for (const prop of Object.keys(attributes2)) {
+      if ("dangerouslySetInnerHTML" === prop) {
+        continue;
       }
-      const chunk = value === "" ? ` ${key}` : ` ${key}="${escapeAttr(value)}"`;
-      stream.write(chunk);
+      const value = attributes2[prop];
+      null != value && (text += " " + ("" === value ? prop : prop + '="' + value + '"'));
     }
-  });
-  stream.write(`>`);
-  const empty = !!emptyElements[tagName];
-  if (empty) {
-    return true;
+    return text;
+  })(attributes) + ">"), !!emptyElements[tagName]) {
+    return;
   }
   const innerHTML = attributes.dangerouslySetInnerHTML;
-  if (innerHTML) {
-    stream.write(innerHTML);
-    stream.write(`</${tagName}>`);
-    return true;
+  null != innerHTML && stream.write(innerHTML), stream.write(`</${tagName}>`);
+};
+const renderSSRComponent = (ssrCtx, stream, elCtx, node, flags, beforeClose) => (setComponentProps(ssrCtx.rctx, elCtx, node.props), then(executeComponent(ssrCtx.rctx, elCtx), (res) => {
+  const hostElement = elCtx.$element$;
+  const newCtx = res.rctx;
+  const invocationContext = newInvokeContext(hostElement, void 0);
+  invocationContext.$subscriber$ = hostElement, invocationContext.$renderCtx$ = newCtx;
+  const projectedContext = {
+    ...ssrCtx,
+    rctx: newCtx
+  };
+  const newSSrContext = {
+    ...ssrCtx,
+    projectedChildren: splitProjectedChildren(node.props.children, ssrCtx),
+    projectedContext,
+    rctx: newCtx,
+    invocationContext
+  };
+  const extraNodes = [];
+  if (elCtx.$appendStyles$) {
+    const array = 4 & flags ? ssrCtx.headNodes : extraNodes;
+    for (const style of elCtx.$appendStyles$) {
+      array.push(jsx("style", {
+        "q:style": style.styleId,
+        dangerouslySetInnerHTML: style.content
+      }));
+    }
   }
-  return false;
-};
-const renderSSRComponent = (ssrCtx, stream, elCtx, node, flags, beforeClose) => {
-  const attributes = updateComponentProperties(ssrCtx.rctx, elCtx, node.props);
-  return then(executeComponent(ssrCtx.rctx, elCtx), (res) => {
-    if (!res) {
-      logError("component was not rendered during SSR");
-      return;
-    }
-    const hostElement = elCtx.$element$;
-    const newCtx = res.rctx;
-    let children = node.props.children;
-    if (children) {
-      if (isArray(children)) {
-        if (children.filter(isNotNullable).length === 0) {
-          children = void 0;
-        }
-      } else {
-        children = [children];
-      }
-    }
-    const invocationContext = newInvokeContext(newCtx.$static$.$doc$, hostElement, void 0);
-    invocationContext.$subscriber$ = hostElement;
-    invocationContext.$renderCtx$ = newCtx;
-    const projectedContext = {
-      ...ssrCtx,
-      rctx: newCtx
-    };
-    const newSSrContext = {
-      ...ssrCtx,
-      projectedChildren: splitProjectedChildren(children, ssrCtx),
-      projectedContext,
-      rctx: newCtx,
-      invocationContext
-    };
-    const extraNodes = [];
-    if (elCtx.$appendStyles$) {
-      const isHTML = !!(flags & IS_HTML);
-      const array = isHTML ? ssrCtx.headNodes : extraNodes;
-      for (const style of elCtx.$appendStyles$) {
-        array.push(jsx("style", {
-          [QStyle]: style.styleId,
-          dangerouslySetInnerHTML: style.content
-        }));
-      }
-    }
-    if (elCtx.$scopeIds$) {
-      for (const styleId of elCtx.$scopeIds$) {
-      }
-      const value = serializeSStyle(elCtx.$scopeIds$);
-      if (value) {
-        attributes[QScopedStyle] = value;
-      }
-    }
-    const newID = getNextIndex(ssrCtx.rctx);
-    attributes[ELEMENT_ID] = newID;
-    elCtx.$id$ = newID;
-    ssrCtx.$contexts$.push(elCtx);
-    const processedNode = jsx(node.type, {
-      ...attributes,
-      children: res.node
-    }, node.key);
-    newSSrContext.hostCtx = elCtx;
-    return renderNodeVirtual(processedNode, elCtx, extraNodes, newSSrContext, stream, flags, (stream2) => {
-      return then(renderQTemplates(newSSrContext, stream2), () => {
-        return beforeClose == null ? void 0 : beforeClose(stream2);
-      });
-    });
-  });
-};
+  const newID = getNextIndex(ssrCtx.rctx);
+  const scopeId = elCtx.$scopeIds$ ? serializeSStyle(elCtx.$scopeIds$) : void 0;
+  const processedNode = jsx(node.type, {
+    "q:sstyle": scopeId,
+    "q:id": newID,
+    children: res.node
+  }, node.key);
+  return elCtx.$id$ = newID, ssrCtx.$contexts$.push(elCtx), newSSrContext.hostCtx = elCtx, renderNodeVirtual(processedNode, elCtx, extraNodes, newSSrContext, stream, flags, (stream2) => beforeClose ? then(renderQTemplates(newSSrContext, stream2), () => beforeClose(stream2)) : renderQTemplates(newSSrContext, stream2));
+}));
 const renderQTemplates = (ssrContext, stream) => {
   const projectedChildren = ssrContext.projectedChildren;
   if (projectedChildren) {
@@ -4421,62 +2729,153 @@ const renderQTemplates = (ssrContext, stream) => {
 const splitProjectedChildren = (children, ssrCtx) => {
   var _a;
   const flatChildren = flatVirtualChildren(children, ssrCtx);
-  if (flatChildren === null) {
-    return void 0;
+  if (null === flatChildren) {
+    return;
   }
   const slotMap = {};
   for (const child of flatChildren) {
     let slotName = "";
-    if (isJSXNode(child)) {
-      slotName = (_a = child.props[QSlot]) != null ? _a : "";
-    }
+    isJSXNode(child) && (slotName = (_a = child.props[QSlot]) != null ? _a : "");
     let array = slotMap[slotName];
-    if (!array) {
-      slotMap[slotName] = array = [];
-    }
-    array.push(child);
+    array || (slotMap[slotName] = array = []), array.push(child);
   }
   return slotMap;
 };
+const createContext = (nodeType) => getContext({
+  nodeType,
+  _qc_: null
+});
 const renderNode = (node, ssrCtx, stream, flags, beforeClose) => {
-  if (typeof node.type === "string") {
-    return renderNodeElement(node, void 0, void 0, ssrCtx, stream, flags, beforeClose);
-  } else {
-    return renderNodeFunction(node, ssrCtx, stream, flags, beforeClose);
+  var _a;
+  const tagName = node.type;
+  if ("string" == typeof tagName) {
+    const key = node.key;
+    const props = node.props;
+    const elCtx = createContext(1);
+    const isHead = "head" === tagName;
+    const hostCtx = ssrCtx.hostCtx;
+    let openingElement = "<" + tagName + ((elCtx2, attributes) => {
+      let text = "";
+      for (const prop of Object.keys(attributes)) {
+        if ("children" === prop || "key" === prop || "class" === prop || "className" === prop || "dangerouslySetInnerHTML" === prop) {
+          continue;
+        }
+        const value = attributes[prop];
+        if ("ref" === prop) {
+          value.current = elCtx2.$element$;
+          continue;
+        }
+        if (isOnProp(prop)) {
+          setEvent(elCtx2.li, prop, value);
+          continue;
+        }
+        const attrName = processPropKey(prop);
+        const attrValue = processPropValue(attrName, value);
+        null != attrValue && (text += " " + ("" === value ? attrName : attrName + '="' + escapeAttr(attrValue) + '"'));
+      }
+      return text;
+    })(elCtx, props);
+    let classStr = stringifyClass((_a = props.class) != null ? _a : props.className);
+    if (hostCtx && (hostCtx.$scopeIds$ && (classStr = hostCtx.$scopeIds$.join(" ") + " " + classStr), !hostCtx.$attachedListeners$)) {
+      hostCtx.$attachedListeners$ = true;
+      for (const eventName of Object.keys(hostCtx.li)) {
+        addQRLListener(elCtx.li, eventName, hostCtx.li[eventName]);
+      }
+    }
+    isHead && (flags |= 1), classStr = classStr.trim(), classStr && (openingElement += ' class="' + classStr + '"');
+    const listeners = Object.keys(elCtx.li);
+    for (const key2 of listeners) {
+      openingElement += " " + key2 + '="' + serializeQRLs(elCtx.li[key2], elCtx) + '"';
+    }
+    if (null != key && (openingElement += ' q:key="' + key + '"'), "ref" in props || listeners.length > 0) {
+      const newID = getNextIndex(ssrCtx.rctx);
+      openingElement += ' q:id="' + newID + '"', elCtx.$id$ = newID, ssrCtx.$contexts$.push(elCtx);
+    }
+    if (1 & flags && (openingElement += " q:head"), openingElement += ">", stream.write(openingElement), emptyElements[tagName]) {
+      return;
+    }
+    const innerHTML = props.dangerouslySetInnerHTML;
+    if (null != innerHTML) {
+      return stream.write(String(innerHTML)), void stream.write(`</${tagName}>`);
+    }
+    isHead || (flags &= -2), "html" === tagName ? flags |= 4 : flags &= -5;
+    const promise = processData(props.children, ssrCtx, stream, flags);
+    return then(promise, () => {
+      if (isHead) {
+        for (const node2 of ssrCtx.headNodes) {
+          renderNodeElementSync(node2.type, node2.props, stream);
+        }
+        ssrCtx.headNodes.length = 0;
+      }
+      if (beforeClose) {
+        return then(beforeClose(stream), () => {
+          stream.write(`</${tagName}>`);
+        });
+      }
+      stream.write(`</${tagName}>`);
+    });
   }
+  if (tagName === Virtual) {
+    const elCtx = createContext(111);
+    return renderNodeVirtual(node, elCtx, void 0, ssrCtx, stream, flags, beforeClose);
+  }
+  if (tagName === SSRComment) {
+    return void stream.write("<!--" + node.props.data + "-->");
+  }
+  if (tagName === InternalSSRStream) {
+    return (async (node2, ssrCtx2, stream2, flags2) => {
+      stream2.write("<!--qkssr-f-->");
+      const generator = node2.props.children;
+      let value;
+      if (isFunction(generator)) {
+        const v = generator({
+          write(chunk) {
+            stream2.write(chunk), stream2.write("<!--qkssr-f-->");
+          }
+        });
+        if (isPromise(v)) {
+          return v;
+        }
+        value = v;
+      } else {
+        value = generator;
+      }
+      for await (const chunk of value) {
+        await processData(chunk, ssrCtx2, stream2, flags2, void 0), stream2.write("<!--qkssr-f-->");
+      }
+    })(node, ssrCtx, stream, flags);
+  }
+  const res = invoke(ssrCtx.invocationContext, tagName, node.props, node.key);
+  return processData(res, ssrCtx, stream, flags, beforeClose);
 };
 const processData = (node, ssrCtx, stream, flags, beforeClose) => {
-  if (node == null || typeof node === "boolean") {
-    return;
-  }
-  if (isJSXNode(node)) {
-    return renderNode(node, ssrCtx, stream, flags, beforeClose);
-  } else if (isPromise(node)) {
-    return node.then((node2) => processData(node2, ssrCtx, stream, flags, beforeClose));
-  } else if (isArray(node)) {
-    node = _flatVirtualChildren(node, ssrCtx);
-    return walkChildren(node, ssrCtx, stream, flags);
-  } else if (isString(node) || typeof node === "number") {
-    if ((flags & IS_RAW_CONTENT) !== 0) {
-      stream.write(String(node));
+  if (null != node && "boolean" != typeof node) {
+    if (isString(node) || "number" == typeof node) {
+      stream.write(escapeHtml(String(node)));
     } else {
-      stream.write(escape(String(node)));
+      if (isJSXNode(node)) {
+        return renderNode(node, ssrCtx, stream, flags, beforeClose);
+      }
+      if (isArray(node)) {
+        return walkChildren(node, ssrCtx, stream, flags);
+      }
+      if (isPromise(node)) {
+        return stream.write("<!--qkssr-f-->"), node.then((node2) => processData(node2, ssrCtx, stream, flags, beforeClose));
+      }
     }
-  } else {
-    logWarn("A unsupported value was passed to the JSX, skipping render. Value:", node);
   }
 };
 function walkChildren(children, ssrContext, stream, flags) {
-  if (children == null) {
+  if (null == children) {
     return;
   }
   if (!isArray(children)) {
     return processData(children, ssrContext, stream, flags);
   }
-  if (children.length === 1) {
+  if (1 === children.length) {
     return processData(children[0], ssrContext, stream, flags);
   }
-  if (children.length === 0) {
+  if (0 === children.length) {
     return;
   }
   let currentIndex = 0;
@@ -4484,139 +2883,70 @@ function walkChildren(children, ssrContext, stream, flags) {
   return children.reduce((prevPromise, child, index2) => {
     const buffer = [];
     buffers.push(buffer);
-    const localStream = {
+    const rendered = processData(child, ssrContext, prevPromise ? {
       write(chunk) {
-        if (currentIndex === index2) {
-          stream.write(chunk);
-        } else {
-          buffer.push(chunk);
-        }
+        currentIndex === index2 ? stream.write(chunk) : buffer.push(chunk);
       }
-    };
-    return then(processData(child, ssrContext, localStream, flags), () => {
-      return then(prevPromise, () => {
-        currentIndex++;
-        if (buffers.length > currentIndex) {
-          buffers[currentIndex].forEach((chunk) => stream.write(chunk));
-        }
-      });
-    });
+    } : stream, flags);
+    return isPromise(rendered) || prevPromise ? then(rendered, () => then(prevPromise, () => {
+      currentIndex++, buffers.length > currentIndex && buffers[currentIndex].forEach((chunk) => stream.write(chunk));
+    })) : void currentIndex++;
   }, void 0);
 }
 const flatVirtualChildren = (children, ssrCtx) => {
-  if (children == null) {
+  if (null == children) {
     return null;
   }
   const result = _flatVirtualChildren(children, ssrCtx);
   const nodes = isArray(result) ? result : [result];
-  if (nodes.length === 0) {
-    return null;
+  return 0 === nodes.length ? null : nodes;
+};
+const stringifyClass = (str) => {
+  if (!str) {
+    return "";
   }
-  return nodes;
+  if ("string" == typeof str) {
+    return str;
+  }
+  if (Array.isArray(str)) {
+    return str.join(" ");
+  }
+  const output = [];
+  for (const key in str) {
+    Object.prototype.hasOwnProperty.call(str, key) && str[key] && output.push(key);
+  }
+  return output.join(" ");
 };
 const _flatVirtualChildren = (children, ssrCtx) => {
-  if (children == null) {
+  if (null == children) {
     return null;
   }
   if (isArray(children)) {
     return children.flatMap((c) => _flatVirtualChildren(c, ssrCtx));
-  } else if (isJSXNode(children) && isFunction(children.type) && children.type !== SSRComment && children.type !== InternalSSRStream && children.type !== Virtual) {
-    const fn = children.type;
-    const res = ssrCtx.invocationContext ? invoke(ssrCtx.invocationContext, () => fn(children.props, children.key)) : fn(children.props, children.key);
+  }
+  if (isJSXNode(children) && isFunction(children.type) && children.type !== SSRComment && children.type !== InternalSSRStream && children.type !== Virtual) {
+    const res = invoke(ssrCtx.invocationContext, children.type, children.props, children.key);
     return flatVirtualChildren(res, ssrCtx);
   }
   return children;
 };
-const updateProperties = (ctx, expectProps) => {
-  const attributes = {};
-  if (!expectProps) {
-    return attributes;
-  }
+const setComponentProps = (rctx, ctx, expectProps) => {
   const keys = Object.keys(expectProps);
-  if (keys.length === 0) {
-    return attributes;
+  if (0 === keys.length) {
+    return;
   }
-  const elm = ctx.$element$;
+  const target = {};
+  ctx.$props$ = createProps(target, rctx.$static$.$containerState$);
   for (const key of keys) {
-    if (key === "children" || key === OnRenderProp) {
-      continue;
-    }
-    const newValue = expectProps[key];
-    if (key === "ref") {
-      newValue.current = elm;
-      continue;
-    }
-    if (key.startsWith("data-") || key.startsWith("aria-")) {
-      attributes[key] = newValue;
-      continue;
-    }
-    if (isOnProp(key)) {
-      setEvent(ctx.li, key, newValue);
-      continue;
-    }
-    setProperty(attributes, key, newValue);
+    "children" !== key && "q:renderFn" !== key && (target[key] = expectProps[key]);
   }
-  return attributes;
 };
-const updateComponentProperties = (rctx, ctx, expectProps) => {
-  const attributes = {};
-  if (!expectProps) {
-    return attributes;
-  }
-  const keys = Object.keys(expectProps);
-  if (keys.length === 0) {
-    return attributes;
-  }
-  const qwikProps = getPropsMutator(ctx, rctx.$static$.$containerState$);
-  for (const key of keys) {
-    if (key === "children" || key === OnRenderProp) {
-      continue;
-    }
-    const newValue = expectProps[key];
-    const skipProperty = ALLOWS_PROPS.includes(key);
-    if (!skipProperty) {
-      qwikProps.set(key, newValue);
-      continue;
-    }
-    setProperty(attributes, key, newValue);
-  }
-  return attributes;
-};
-function setProperty(attributes, prop, value) {
-  if (value != null && value !== false) {
-    prop = processPropKey(prop);
-    const attrValue = processPropValue(prop, value, attributes[prop]);
-    if (attrValue !== null) {
-      attributes[prop] = attrValue;
-    }
-  }
-}
 function processPropKey(prop) {
-  if (prop === "className") {
-    return "class";
-  }
-  return prop;
+  return "htmlFor" === prop ? "for" : prop;
 }
-function processPropValue(prop, value, prevValue) {
-  if (prop === "class") {
-    const str = joinClasses(value, prevValue);
-    return str === "" ? null : str;
-  }
-  if (prop === "style") {
-    return stringifyStyle(value);
-  }
-  if (value === false || value == null) {
-    return null;
-  }
-  if (value === true) {
-    return "";
-  }
-  return String(value);
+function processPropValue(prop, value) {
+  return "style" === prop ? stringifyStyle(value) : false === value || null == value ? null : true === value ? "" : String(value);
 }
-const hasRawContent = {
-  style: true,
-  script: true
-};
 const emptyElements = {
   area: true,
   base: true,
@@ -4637,160 +2967,49 @@ const emptyElements = {
   track: true,
   wbr: true
 };
-const escape = (s) => {
-  return s.replace(/[&<>\u00A0]/g, (c) => {
-    switch (c) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case "\xA0":
-        return "&nbsp;";
-      default:
-        return "";
-    }
-  });
-};
-const escapeAttr = (s) => {
-  const toEscape = /[&"\u00A0]/g;
-  if (!toEscape.test(s)) {
-    return s;
-  } else {
-    return s.replace(toEscape, (c) => {
-      switch (c) {
-        case "&":
-          return "&amp;";
-        case '"':
-          return "&quot;";
-        case "\xA0":
-          return "&nbsp;";
-        default:
-          return "";
-      }
-    });
+const ESCAPE_HTML = /[&<>]/g;
+const ESCAPE_ATTRIBUTES = /[&"]/g;
+const escapeHtml = (s) => s.replace(ESCAPE_HTML, (c) => {
+  switch (c) {
+    case "&":
+      return "&amp;";
+    case "<":
+      return "&lt;";
+    case ">":
+      return "&gt;";
+    default:
+      return "";
   }
-};
+});
+const escapeAttr = (s) => s.replace(ESCAPE_ATTRIBUTES, (c) => {
+  switch (c) {
+    case "&":
+      return "&amp;";
+    case '"':
+      return "&quot;";
+    default:
+      return "";
+  }
+});
 const useStore = (initialState, opts) => {
   var _a;
   const { get, set, ctx } = useSequentialScope();
-  if (get != null) {
+  if (null != get) {
     return get;
   }
   const value = isFunction(initialState) ? initialState() : initialState;
-  if ((opts == null ? void 0 : opts.reactive) === false) {
-    set(value);
-    return value;
-  } else {
+  if (false === (opts == null ? void 0 : opts.reactive)) {
+    return set(value), value;
+  }
+  {
     const containerState = ctx.$renderCtx$.$static$.$containerState$;
-    const recursive = (_a = opts == null ? void 0 : opts.recursive) != null ? _a : false;
-    const flags = recursive ? QObjectRecursive : 0;
-    const newStore = createProxy(value, containerState, flags, void 0);
-    set(newStore);
-    return newStore;
-  }
-};
-const createContext = (name) => {
-  return Object.freeze({
-    id: fromCamelToKebabCase(name)
-  });
-};
-const useContextProvider = (context, newValue) => {
-  const { get, set, ctx } = useSequentialScope();
-  if (get) {
-    return;
-  }
-  if (qDev$1) {
-    validateContext(context);
-  }
-  const hostElement = ctx.$hostElement$;
-  const hostCtx = getContext(hostElement);
-  let contexts = hostCtx.$contexts$;
-  if (!contexts) {
-    hostCtx.$contexts$ = contexts = /* @__PURE__ */ new Map();
-  }
-  if (qDev$1) {
-    verifySerializable(newValue);
-  }
-  contexts.set(context.id, newValue);
-  set(true);
-};
-const useContext = (context) => {
-  const { get, set, ctx } = useSequentialScope();
-  if (get) {
-    return get;
-  }
-  if (qDev$1) {
-    validateContext(context);
-  }
-  let hostElement = ctx.$hostElement$;
-  const contexts = ctx.$renderCtx$.$localStack$;
-  for (let i = contexts.length - 1; i >= 0; i--) {
-    const ctx2 = contexts[i];
-    hostElement = ctx2.$element$;
-    if (ctx2.$contexts$) {
-      const found = ctx2.$contexts$.get(context.id);
-      if (found) {
-        set(found);
-        return found;
-      }
-    }
-  }
-  if (hostElement.closest) {
-    const value = queryContextFromDom(hostElement, context.id);
-    if (value !== void 0) {
-      set(value);
-      return value;
-    }
-  }
-  throw qError(QError_notFoundContext, context.id);
-};
-const queryContextFromDom = (hostElement, contextId) => {
-  var _a;
-  let element = hostElement;
-  while (element) {
-    let node = element;
-    let virtual;
-    while (node && (virtual = findVirtual(node))) {
-      const contexts = (_a = tryGetContext(virtual)) == null ? void 0 : _a.$contexts$;
-      if (contexts) {
-        if (contexts.has(contextId)) {
-          return contexts.get(contextId);
-        }
-      }
-      node = virtual;
-    }
-    element = element.parentElement;
-  }
-  return void 0;
-};
-const findVirtual = (el) => {
-  let node = el;
-  let stack = 1;
-  while (node = node.previousSibling) {
-    if (isComment(node)) {
-      if (node.data === "/qv") {
-        stack++;
-      } else if (node.data.startsWith("qv ")) {
-        stack--;
-        if (stack === 0) {
-          return getVirtualElement(node);
-        }
-      }
-    }
-  }
-  return null;
-};
-const validateContext = (context) => {
-  if (!isObject(context) || typeof context.id !== "string" || context.id.length === 0) {
-    throw qError(QError_invalidContext, context);
+    const newStore = createProxy(value, containerState, ((_a = opts == null ? void 0 : opts.recursive) != null ? _a : false) ? 1 : 0, void 0);
+    return set(newStore), newStore;
   }
 };
 function useEnvData(key, defaultValue) {
   var _a;
-  const ctx = useInvokeContext();
-  return (_a = ctx.$renderCtx$.$static$.$containerState$.$envData$[key]) != null ? _a : defaultValue;
+  return (_a = useInvokeContext().$renderCtx$.$static$.$containerState$.$envData$[key]) != null ? _a : defaultValue;
 }
 const useStylesQrl = (styles2) => {
   _useStyles(styles2, (str) => str, false);
@@ -4801,34 +3020,34 @@ const _useStyles = (styleQrl, transform, scoped) => {
     return get;
   }
   const renderCtx = ctx.$renderCtx$;
-  const styleId = styleKey(styleQrl, i);
-  const hostElement = ctx.$hostElement$;
+  const styleId = (index2 = i, `${((text, hash = 0) => {
+    if (0 === text.length) {
+      return hash;
+    }
+    for (let i2 = 0; i2 < text.length; i2++) {
+      hash = (hash << 5) - hash + text.charCodeAt(i2), hash |= 0;
+    }
+    return Number(Math.abs(hash)).toString(36);
+  })(styleQrl.$hash$)}-${index2}`);
+  var index2;
   const containerState = renderCtx.$static$.$containerState$;
   const elCtx = getContext(ctx.$hostElement$);
-  set(styleId);
-  if (!elCtx.$appendStyles$) {
-    elCtx.$appendStyles$ = [];
+  if (set(styleId), elCtx.$appendStyles$ || (elCtx.$appendStyles$ = []), elCtx.$scopeIds$ || (elCtx.$scopeIds$ = []), scoped && elCtx.$scopeIds$.push(((styleId2) => "\u2B50\uFE0F" + styleId2)(styleId)), ((containerState2, styleId2) => containerState2.$styleIds$.has(styleId2))(containerState, styleId)) {
+    return styleId;
   }
-  if (!elCtx.$scopeIds$) {
-    elCtx.$scopeIds$ = [];
-  }
-  if (scoped) {
-    elCtx.$scopeIds$.push(styleContent(styleId));
-  }
-  if (!hasStyle(containerState, styleId)) {
-    containerState.$styleIds$.add(styleId);
-    ctx.$waitOn$.push(styleQrl.resolve(hostElement).then((styleText) => {
-      elCtx.$appendStyles$.push({
-        styleId,
-        content: transform(styleText, styleId)
-      });
-    }));
-  }
-  return styleId;
+  containerState.$styleIds$.add(styleId);
+  const value = styleQrl.$resolveLazy$(containerState.$containerEl$);
+  const appendStyle = (styleText) => {
+    elCtx.$appendStyles$, elCtx.$appendStyles$.push({
+      styleId,
+      content: transform(styleText, styleId)
+    });
+  };
+  return isPromise(value) ? ctx.$waitOn$.push(value.then(appendStyle)) : appendStyle(value), styleId;
 };
 /**
  * @license
- * @builder.io/qwik/server 0.0.108
+ * @builder.io/qwik/server 0.9.0
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/BuilderIO/qwik/blob/main/LICENSE
@@ -4865,10 +3084,8 @@ function getBuildBase(opts) {
   }
   return "/build/";
 }
-function createPlatform(document2, opts, mapper) {
-  if (!document2 || document2.nodeType !== 9) {
-    throw new Error(`Invalid Document implementation`);
-  }
+function createPlatform(opts, resolvedManifest) {
+  const mapper = resolvedManifest == null ? void 0 : resolvedManifest.mapper;
   const mapperFn = opts.symbolMapper ? opts.symbolMapper : (symbolName) => {
     if (mapper) {
       const hash = getSymbolHash(symbolName);
@@ -4910,9 +3127,9 @@ function createPlatform(document2, opts, mapper) {
   };
   return serverPlatform;
 }
-async function setServerPlatform(document2, opts, mapper) {
-  const platform = createPlatform(document2, opts, mapper);
-  setPlatform(document2, platform);
+async function setServerPlatform(opts, manifest2) {
+  const platform = createPlatform(opts, manifest2);
+  setPlatform(platform);
 }
 var getSymbolHash = (symbolName) => {
   const index2 = symbolName.lastIndexOf("_");
@@ -4921,16 +3138,156 @@ var getSymbolHash = (symbolName) => {
   }
   return symbolName;
 };
-var QWIK_LOADER_DEFAULT_MINIFIED = '(()=>{function e(e){return"object"==typeof e&&e&&"Module"===e[Symbol.toStringTag]}((t,n)=>{const o="__q_context__",r=(e,n,o)=>{n=n.replace(/([A-Z])/g,(e=>"-"+e.toLowerCase())),t.querySelectorAll("[on"+e+"\\\\:"+n+"]").forEach((t=>c(t,e,n,o)))},s=(e,t,n)=>e.dispatchEvent(new CustomEvent(t,{detail:n,bubbles:!0,composed:!0})),i=e=>{throw Error("QWIK "+e)},a=(e,n)=>(e=e.closest("[q\\\\:container]"),new URL(n,new URL(e?e.getAttribute("q:base"):t.baseURI,t.baseURI))),c=async(n,r,c,u)=>{var d;n.hasAttribute("preventdefault:"+c)&&u.preventDefault();const b="on"+r+":"+c,f=null==(d=n._qc_)?void 0:d.li[b];if(f)return void f.forEach((e=>e.getFn([n,u],(()=>n.isConnected))(u,n)));const v=n.getAttribute(b);if(v)for(const r of v.split("\\n")){const c=a(n,r);if(c){const r=l(c),a=(window[c.pathname]||(p=await import(c.href.split("#")[0]),Object.values(p).find(e)||p))[r]||i(c+" does not export "+r),d=t[o];if(n.isConnected)try{t[o]=[n,u,c],a(u,n)}finally{t[o]=d,s(n,"qsymbol",r)}}}var p},l=e=>e.hash.replace(/^#?([^?[|]*).*$/,"$1")||"default",u=e=>{let t=e.target;for(r("-document",e.type,e);t&&t.getAttribute;)c(t,"",e.type,e),t=e.bubbles?t.parentElement:null},d=e=>{r("-window",e.type,e)},b=()=>{const e=t.readyState;if(!n&&("interactive"==e||"complete"==e)&&(n=1,r("","qinit",new CustomEvent("qinit")),"undefined"!=typeof IntersectionObserver)){const e=new IntersectionObserver((t=>{for(const n of t)n.isIntersecting&&(e.unobserve(n.target),c(n.target,"","qvisible",new CustomEvent("qvisible",{bubbles:!1,detail:n})))}));t.qO=e,t.querySelectorAll("[on\\\\:qvisible]").forEach((t=>e.observe(t)))}},f=e=>{document.addEventListener(e,u,{capture:!0}),window.addEventListener(e,d)};if(!t.qR){t.qR=1;{const e=t.querySelector("script[events]");if(e)e.getAttribute("events").split(/[\\s,;]+/).forEach(f);else for(const e in t)e.startsWith("on")&&f(e.slice(2))}t.addEventListener("readystatechange",b),b()}})(document)})();';
-var QWIK_LOADER_DEFAULT_DEBUG = '(() => {\n    function findModule(module) {\n        return Object.values(module).find(isModule) || module;\n    }\n    function isModule(module) {\n        return "object" == typeof module && module && "Module" === module[Symbol.toStringTag];\n    }\n    ((doc, hasInitialized) => {\n        const broadcast = (infix, type, ev) => {\n            type = type.replace(/([A-Z])/g, (a => "-" + a.toLowerCase()));\n            doc.querySelectorAll("[on" + infix + "\\\\:" + type + "]").forEach((target => dispatch(target, infix, type, ev)));\n        };\n        const emitEvent = (el, eventName, detail) => el.dispatchEvent(new CustomEvent(eventName, {\n            detail: detail,\n            bubbles: !0,\n            composed: !0\n        }));\n        const error = msg => {\n            throw new Error("QWIK " + msg);\n        };\n        const qrlResolver = (element, qrl) => {\n            element = element.closest("[q\\\\:container]");\n            return new URL(qrl, new URL(element ? element.getAttribute("q:base") : doc.baseURI, doc.baseURI));\n        };\n        const dispatch = async (element, onPrefix, eventName, ev) => {\n            var _a;\n            element.hasAttribute("preventdefault:" + eventName) && ev.preventDefault();\n            const attrName = "on" + onPrefix + ":" + eventName;\n            const qrls = null == (_a = element._qc_) ? void 0 : _a.li[attrName];\n            if (qrls) {\n                qrls.forEach((q => q.getFn([ element, ev ], (() => element.isConnected))(ev, element)));\n                return;\n            }\n            const attrValue = element.getAttribute(attrName);\n            if (attrValue) {\n                for (const qrl of attrValue.split("\\n")) {\n                    const url = qrlResolver(element, qrl);\n                    if (url) {\n                        const symbolName = getSymbolName(url);\n                        const handler = (window[url.pathname] || findModule(await import(url.href.split("#")[0])))[symbolName] || error(url + " does not export " + symbolName);\n                        const previousCtx = doc.__q_context__;\n                        if (element.isConnected) {\n                            try {\n                                doc.__q_context__ = [ element, ev, url ];\n                                handler(ev, element);\n                            } finally {\n                                doc.__q_context__ = previousCtx;\n                                emitEvent(element, "qsymbol", symbolName);\n                            }\n                        }\n                    }\n                }\n            }\n        };\n        const getSymbolName = url => url.hash.replace(/^#?([^?[|]*).*$/, "$1") || "default";\n        const processDocumentEvent = ev => {\n            let element = ev.target;\n            broadcast("-document", ev.type, ev);\n            while (element && element.getAttribute) {\n                dispatch(element, "", ev.type, ev);\n                element = ev.bubbles ? element.parentElement : null;\n            }\n        };\n        const processWindowEvent = ev => {\n            broadcast("-window", ev.type, ev);\n        };\n        const processReadyStateChange = () => {\n            const readyState = doc.readyState;\n            if (!hasInitialized && ("interactive" == readyState || "complete" == readyState)) {\n                hasInitialized = 1;\n                broadcast("", "qinit", new CustomEvent("qinit"));\n                if ("undefined" != typeof IntersectionObserver) {\n                    const observer = new IntersectionObserver((entries => {\n                        for (const entry of entries) {\n                            if (entry.isIntersecting) {\n                                observer.unobserve(entry.target);\n                                dispatch(entry.target, "", "qvisible", new CustomEvent("qvisible", {\n                                    bubbles: !1,\n                                    detail: entry\n                                }));\n                            }\n                        }\n                    }));\n                    doc.qO = observer;\n                    doc.querySelectorAll("[on\\\\:qvisible]").forEach((el => observer.observe(el)));\n                }\n            }\n        };\n        const addDocEventListener = eventName => {\n            document.addEventListener(eventName, processDocumentEvent, {\n                capture: !0\n            });\n            window.addEventListener(eventName, processWindowEvent);\n        };\n        if (!doc.qR) {\n            doc.qR = 1;\n            {\n                const scriptTag = doc.querySelector("script[events]");\n                if (scriptTag) {\n                    scriptTag.getAttribute("events").split(/[\\s,;]+/).forEach(addDocEventListener);\n                } else {\n                    for (const key in doc) {\n                        key.startsWith("on") && addDocEventListener(key.slice(2));\n                    }\n                }\n            }\n            doc.addEventListener("readystatechange", processReadyStateChange);\n            processReadyStateChange();\n        }\n    })(document);\n})();';
-var QWIK_LOADER_OPTIMIZE_MINIFIED = '(()=>{function e(e){return"object"==typeof e&&e&&"Module"===e[Symbol.toStringTag]}((t,n)=>{const o="__q_context__",r=(e,n,o)=>{n=n.replace(/([A-Z])/g,(e=>"-"+e.toLowerCase())),t.querySelectorAll("[on"+e+"\\\\:"+n+"]").forEach((t=>c(t,e,n,o)))},i=(e,t,n)=>e.dispatchEvent(new CustomEvent(t,{detail:n,bubbles:!0,composed:!0})),s=e=>{throw Error("QWIK "+e)},a=(e,n)=>(e=e.closest("[q\\\\:container]"),new URL(n,new URL(e?e.getAttribute("q:base"):t.baseURI,t.baseURI))),c=async(n,r,c,d)=>{var u;n.hasAttribute("preventdefault:"+c)&&d.preventDefault();const b="on"+r+":"+c,f=null==(u=n._qc_)?void 0:u.li[b];if(f)return void f.forEach((e=>e.getFn([n,d],(()=>n.isConnected))(d,n)));const v=n.getAttribute(b);if(v)for(const r of v.split("\\n")){const c=a(n,r);if(c){const r=l(c),a=(window[c.pathname]||(p=await import(c.href.split("#")[0]),Object.values(p).find(e)||p))[r]||s(c+" does not export "+r),u=t[o];if(n.isConnected)try{t[o]=[n,d,c],a(d,n)}finally{t[o]=u,i(n,"qsymbol",r)}}}var p},l=e=>e.hash.replace(/^#?([^?[|]*).*$/,"$1")||"default",d=e=>{let t=e.target;for(r("-document",e.type,e);t&&t.getAttribute;)c(t,"",e.type,e),t=e.bubbles?t.parentElement:null},u=e=>{r("-window",e.type,e)},b=()=>{const e=t.readyState;if(!n&&("interactive"==e||"complete"==e)&&(n=1,r("","qinit",new CustomEvent("qinit")),"undefined"!=typeof IntersectionObserver)){const e=new IntersectionObserver((t=>{for(const n of t)n.isIntersecting&&(e.unobserve(n.target),c(n.target,"","qvisible",new CustomEvent("qvisible",{bubbles:!1,detail:n})))}));t.qO=e,t.querySelectorAll("[on\\\\:qvisible]").forEach((t=>e.observe(t)))}};t.qR||(t.qR=1,window.qEvents.forEach((e=>{document.addEventListener(e,d,{capture:!0}),window.addEventListener(e,u)})),t.addEventListener("readystatechange",b),b())})(document)})();';
-var QWIK_LOADER_OPTIMIZE_DEBUG = '(() => {\n    function findModule(module) {\n        return Object.values(module).find(isModule) || module;\n    }\n    function isModule(module) {\n        return "object" == typeof module && module && "Module" === module[Symbol.toStringTag];\n    }\n    ((doc, hasInitialized) => {\n        const broadcast = (infix, type, ev) => {\n            type = type.replace(/([A-Z])/g, (a => "-" + a.toLowerCase()));\n            doc.querySelectorAll("[on" + infix + "\\\\:" + type + "]").forEach((target => dispatch(target, infix, type, ev)));\n        };\n        const emitEvent = (el, eventName, detail) => el.dispatchEvent(new CustomEvent(eventName, {\n            detail: detail,\n            bubbles: !0,\n            composed: !0\n        }));\n        const error = msg => {\n            throw new Error("QWIK " + msg);\n        };\n        const qrlResolver = (element, qrl) => {\n            element = element.closest("[q\\\\:container]");\n            return new URL(qrl, new URL(element ? element.getAttribute("q:base") : doc.baseURI, doc.baseURI));\n        };\n        const dispatch = async (element, onPrefix, eventName, ev) => {\n            var _a;\n            element.hasAttribute("preventdefault:" + eventName) && ev.preventDefault();\n            const attrName = "on" + onPrefix + ":" + eventName;\n            const qrls = null == (_a = element._qc_) ? void 0 : _a.li[attrName];\n            if (qrls) {\n                qrls.forEach((q => q.getFn([ element, ev ], (() => element.isConnected))(ev, element)));\n                return;\n            }\n            const attrValue = element.getAttribute(attrName);\n            if (attrValue) {\n                for (const qrl of attrValue.split("\\n")) {\n                    const url = qrlResolver(element, qrl);\n                    if (url) {\n                        const symbolName = getSymbolName(url);\n                        const handler = (window[url.pathname] || findModule(await import(url.href.split("#")[0])))[symbolName] || error(url + " does not export " + symbolName);\n                        const previousCtx = doc.__q_context__;\n                        if (element.isConnected) {\n                            try {\n                                doc.__q_context__ = [ element, ev, url ];\n                                handler(ev, element);\n                            } finally {\n                                doc.__q_context__ = previousCtx;\n                                emitEvent(element, "qsymbol", symbolName);\n                            }\n                        }\n                    }\n                }\n            }\n        };\n        const getSymbolName = url => url.hash.replace(/^#?([^?[|]*).*$/, "$1") || "default";\n        const processDocumentEvent = ev => {\n            let element = ev.target;\n            broadcast("-document", ev.type, ev);\n            while (element && element.getAttribute) {\n                dispatch(element, "", ev.type, ev);\n                element = ev.bubbles ? element.parentElement : null;\n            }\n        };\n        const processWindowEvent = ev => {\n            broadcast("-window", ev.type, ev);\n        };\n        const processReadyStateChange = () => {\n            const readyState = doc.readyState;\n            if (!hasInitialized && ("interactive" == readyState || "complete" == readyState)) {\n                hasInitialized = 1;\n                broadcast("", "qinit", new CustomEvent("qinit"));\n                if ("undefined" != typeof IntersectionObserver) {\n                    const observer = new IntersectionObserver((entries => {\n                        for (const entry of entries) {\n                            if (entry.isIntersecting) {\n                                observer.unobserve(entry.target);\n                                dispatch(entry.target, "", "qvisible", new CustomEvent("qvisible", {\n                                    bubbles: !1,\n                                    detail: entry\n                                }));\n                            }\n                        }\n                    }));\n                    doc.qO = observer;\n                    doc.querySelectorAll("[on\\\\:qvisible]").forEach((el => observer.observe(el)));\n                }\n            }\n        };\n        const addDocEventListener = eventName => {\n            document.addEventListener(eventName, processDocumentEvent, {\n                capture: !0\n            });\n            window.addEventListener(eventName, processWindowEvent);\n        };\n        if (!doc.qR) {\n            doc.qR = 1;\n            window.qEvents.forEach(addDocEventListener);\n            doc.addEventListener("readystatechange", processReadyStateChange);\n            processReadyStateChange();\n        }\n    })(document);\n})();';
+var QWIK_LOADER_DEFAULT_MINIFIED = '(()=>{function e(e){return"object"==typeof e&&e&&"Module"===e[Symbol.toStringTag]}((t,n)=>{const o="__q_context__",r=window,a=(e,n,o)=>{n=n.replace(/([A-Z])/g,(e=>"-"+e.toLowerCase())),t.querySelectorAll("[on"+e+"\\\\:"+n+"]").forEach((t=>l(t,e,n,o)))},i=(e,t)=>new CustomEvent(e,{detail:t}),s=e=>{throw Error("QWIK "+e)},c=(e,n)=>(e=e.closest("[q\\\\:container]"),new URL(n,new URL(e?e.getAttribute("q:base"):t.baseURI,t.baseURI))),l=async(n,a,l,d)=>{var u;n.hasAttribute("preventdefault:"+l)&&d.preventDefault();const b="on"+a+":"+l,v=null==(u=n._qc_)?void 0:u.li[b];if(v){for(const e of v)await e.getFn([n,d],(()=>n.isConnected))(d,n);return}const p=n.getAttribute(b);if(p)for(const a of p.split("\\n")){const l=c(n,a);if(l){const a=f(l),c=(r[l.pathname]||(w=await import(l.href.split("#")[0]),Object.values(w).find(e)||w))[a]||s(l+" does not export "+a),u=t[o];if(n.isConnected)try{t[o]=[n,d,l],await c(d,n)}finally{t[o]=u,t.dispatchEvent(i("qsymbol",{symbol:a,element:n}))}}}var w},f=e=>e.hash.replace(/^#?([^?[|]*).*$/,"$1")||"default",d=async e=>{let t=e.target;for(a("-document",e.type,e);t&&t.getAttribute;)await l(t,"",e.type,e),t=e.bubbles&&!0!==e.cancelBubble?t.parentElement:null},u=e=>{a("-window",e.type,e)},b=()=>{const e=t.readyState;if(!n&&("interactive"==e||"complete"==e)){n=1,a("","qinit",i("qinit"));const e=t.querySelectorAll("[on\\\\:qvisible]");if(e.length>0){const t=new IntersectionObserver((e=>{for(const n of e)n.isIntersecting&&(t.unobserve(n.target),l(n.target,"","qvisible",i("qvisible",n)))}));e.forEach((e=>t.observe(e)))}}},v=new Set,p=e=>{for(const t of e)v.has(t)||(document.addEventListener(t,d,{capture:!0}),r.addEventListener(t,u),v.add(t))};if(!t.qR){const e=r.qwikevents;Array.isArray(e)&&p(e),r.qwikevents={push:(...e)=>p(e)},t.addEventListener("readystatechange",b),b()}})(document)})();';
+var QWIK_LOADER_DEFAULT_DEBUG = '(() => {\n    function findModule(module) {\n        return Object.values(module).find(isModule) || module;\n    }\n    function isModule(module) {\n        return "object" == typeof module && module && "Module" === module[Symbol.toStringTag];\n    }\n    ((doc, hasInitialized) => {\n        const win = window;\n        const broadcast = (infix, type, ev) => {\n            type = type.replace(/([A-Z])/g, (a => "-" + a.toLowerCase()));\n            doc.querySelectorAll("[on" + infix + "\\\\:" + type + "]").forEach((target => dispatch(target, infix, type, ev)));\n        };\n        const createEvent = (eventName, detail) => new CustomEvent(eventName, {\n            detail: detail\n        });\n        const error = msg => {\n            throw new Error("QWIK " + msg);\n        };\n        const qrlResolver = (element, qrl) => {\n            element = element.closest("[q\\\\:container]");\n            return new URL(qrl, new URL(element ? element.getAttribute("q:base") : doc.baseURI, doc.baseURI));\n        };\n        const dispatch = async (element, onPrefix, eventName, ev) => {\n            var _a;\n            element.hasAttribute("preventdefault:" + eventName) && ev.preventDefault();\n            const attrName = "on" + onPrefix + ":" + eventName;\n            const qrls = null == (_a = element._qc_) ? void 0 : _a.li[attrName];\n            if (qrls) {\n                for (const q of qrls) {\n                    await q.getFn([ element, ev ], (() => element.isConnected))(ev, element);\n                }\n                return;\n            }\n            const attrValue = element.getAttribute(attrName);\n            if (attrValue) {\n                for (const qrl of attrValue.split("\\n")) {\n                    const url = qrlResolver(element, qrl);\n                    if (url) {\n                        const symbolName = getSymbolName(url);\n                        const handler = (win[url.pathname] || findModule(await import(url.href.split("#")[0])))[symbolName] || error(url + " does not export " + symbolName);\n                        const previousCtx = doc.__q_context__;\n                        if (element.isConnected) {\n                            try {\n                                doc.__q_context__ = [ element, ev, url ];\n                                await handler(ev, element);\n                            } finally {\n                                doc.__q_context__ = previousCtx;\n                                doc.dispatchEvent(createEvent("qsymbol", {\n                                    symbol: symbolName,\n                                    element: element\n                                }));\n                            }\n                        }\n                    }\n                }\n            }\n        };\n        const getSymbolName = url => url.hash.replace(/^#?([^?[|]*).*$/, "$1") || "default";\n        const processDocumentEvent = async ev => {\n            let element = ev.target;\n            broadcast("-document", ev.type, ev);\n            while (element && element.getAttribute) {\n                await dispatch(element, "", ev.type, ev);\n                element = ev.bubbles && !0 !== ev.cancelBubble ? element.parentElement : null;\n            }\n        };\n        const processWindowEvent = ev => {\n            broadcast("-window", ev.type, ev);\n        };\n        const processReadyStateChange = () => {\n            const readyState = doc.readyState;\n            if (!hasInitialized && ("interactive" == readyState || "complete" == readyState)) {\n                hasInitialized = 1;\n                broadcast("", "qinit", createEvent("qinit"));\n                const results = doc.querySelectorAll("[on\\\\:qvisible]");\n                if (results.length > 0) {\n                    const observer = new IntersectionObserver((entries => {\n                        for (const entry of entries) {\n                            if (entry.isIntersecting) {\n                                observer.unobserve(entry.target);\n                                dispatch(entry.target, "", "qvisible", createEvent("qvisible", entry));\n                            }\n                        }\n                    }));\n                    results.forEach((el => observer.observe(el)));\n                }\n            }\n        };\n        const events =  new Set;\n        const push = eventNames => {\n            for (const eventName of eventNames) {\n                if (!events.has(eventName)) {\n                    document.addEventListener(eventName, processDocumentEvent, {\n                        capture: !0\n                    });\n                    win.addEventListener(eventName, processWindowEvent);\n                    events.add(eventName);\n                }\n            }\n        };\n        if (!doc.qR) {\n            const qwikevents = win.qwikevents;\n            Array.isArray(qwikevents) && push(qwikevents);\n            win.qwikevents = {\n                push: (...e) => push(e)\n            };\n            doc.addEventListener("readystatechange", processReadyStateChange);\n            processReadyStateChange();\n        }\n    })(document);\n})();';
+var QWIK_LOADER_OPTIMIZE_MINIFIED = '(()=>{function e(e){return"object"==typeof e&&e&&"Module"===e[Symbol.toStringTag]}((t,n)=>{const o="__q_context__",r=window,a=(e,n,o)=>{n=n.replace(/([A-Z])/g,(e=>"-"+e.toLowerCase())),t.querySelectorAll("[on"+e+"\\\\:"+n+"]").forEach((t=>l(t,e,n,o)))},i=(e,t)=>new CustomEvent(e,{detail:t}),s=e=>{throw Error("QWIK "+e)},c=(e,n)=>(e=e.closest("[q\\\\:container]"),new URL(n,new URL(e?e.getAttribute("q:base"):t.baseURI,t.baseURI))),l=async(n,a,l,d)=>{var u;n.hasAttribute("preventdefault:"+l)&&d.preventDefault();const b="on"+a+":"+l,v=null==(u=n._qc_)?void 0:u.li[b];if(v){for(const e of v)await e.getFn([n,d],(()=>n.isConnected))(d,n);return}const p=n.getAttribute(b);if(p)for(const a of p.split("\\n")){const l=c(n,a);if(l){const a=f(l),c=(r[l.pathname]||(w=await import(l.href.split("#")[0]),Object.values(w).find(e)||w))[a]||s(l+" does not export "+a),u=t[o];if(n.isConnected)try{t[o]=[n,d,l],await c(d,n)}finally{t[o]=u,t.dispatchEvent(i("qsymbol",{symbol:a,element:n}))}}}var w},f=e=>e.hash.replace(/^#?([^?[|]*).*$/,"$1")||"default",d=async e=>{let t=e.target;for(a("-document",e.type,e);t&&t.getAttribute;)await l(t,"",e.type,e),t=e.bubbles&&!0!==e.cancelBubble?t.parentElement:null},u=e=>{a("-window",e.type,e)},b=()=>{const e=t.readyState;if(!n&&("interactive"==e||"complete"==e)){n=1,a("","qinit",i("qinit"));const e=t.querySelectorAll("[on\\\\:qvisible]");if(e.length>0){const t=new IntersectionObserver((e=>{for(const n of e)n.isIntersecting&&(t.unobserve(n.target),l(n.target,"","qvisible",i("qvisible",n)))}));e.forEach((e=>t.observe(e)))}}},v=new Set,p=e=>{for(const t of e)v.has(t)||(document.addEventListener(t,d,{capture:!0}),r.addEventListener(t,u),v.add(t))};if(!t.qR){const e=r.qwikevents;Array.isArray(e)&&p(e),r.qwikevents={push:(...e)=>p(e)},t.addEventListener("readystatechange",b),b()}})(document)})();';
+var QWIK_LOADER_OPTIMIZE_DEBUG = '(() => {\n    function findModule(module) {\n        return Object.values(module).find(isModule) || module;\n    }\n    function isModule(module) {\n        return "object" == typeof module && module && "Module" === module[Symbol.toStringTag];\n    }\n    ((doc, hasInitialized) => {\n        const win = window;\n        const broadcast = (infix, type, ev) => {\n            type = type.replace(/([A-Z])/g, (a => "-" + a.toLowerCase()));\n            doc.querySelectorAll("[on" + infix + "\\\\:" + type + "]").forEach((target => dispatch(target, infix, type, ev)));\n        };\n        const createEvent = (eventName, detail) => new CustomEvent(eventName, {\n            detail: detail\n        });\n        const error = msg => {\n            throw new Error("QWIK " + msg);\n        };\n        const qrlResolver = (element, qrl) => {\n            element = element.closest("[q\\\\:container]");\n            return new URL(qrl, new URL(element ? element.getAttribute("q:base") : doc.baseURI, doc.baseURI));\n        };\n        const dispatch = async (element, onPrefix, eventName, ev) => {\n            var _a;\n            element.hasAttribute("preventdefault:" + eventName) && ev.preventDefault();\n            const attrName = "on" + onPrefix + ":" + eventName;\n            const qrls = null == (_a = element._qc_) ? void 0 : _a.li[attrName];\n            if (qrls) {\n                for (const q of qrls) {\n                    await q.getFn([ element, ev ], (() => element.isConnected))(ev, element);\n                }\n                return;\n            }\n            const attrValue = element.getAttribute(attrName);\n            if (attrValue) {\n                for (const qrl of attrValue.split("\\n")) {\n                    const url = qrlResolver(element, qrl);\n                    if (url) {\n                        const symbolName = getSymbolName(url);\n                        const handler = (win[url.pathname] || findModule(await import(url.href.split("#")[0])))[symbolName] || error(url + " does not export " + symbolName);\n                        const previousCtx = doc.__q_context__;\n                        if (element.isConnected) {\n                            try {\n                                doc.__q_context__ = [ element, ev, url ];\n                                await handler(ev, element);\n                            } finally {\n                                doc.__q_context__ = previousCtx;\n                                doc.dispatchEvent(createEvent("qsymbol", {\n                                    symbol: symbolName,\n                                    element: element\n                                }));\n                            }\n                        }\n                    }\n                }\n            }\n        };\n        const getSymbolName = url => url.hash.replace(/^#?([^?[|]*).*$/, "$1") || "default";\n        const processDocumentEvent = async ev => {\n            let element = ev.target;\n            broadcast("-document", ev.type, ev);\n            while (element && element.getAttribute) {\n                await dispatch(element, "", ev.type, ev);\n                element = ev.bubbles && !0 !== ev.cancelBubble ? element.parentElement : null;\n            }\n        };\n        const processWindowEvent = ev => {\n            broadcast("-window", ev.type, ev);\n        };\n        const processReadyStateChange = () => {\n            const readyState = doc.readyState;\n            if (!hasInitialized && ("interactive" == readyState || "complete" == readyState)) {\n                hasInitialized = 1;\n                broadcast("", "qinit", createEvent("qinit"));\n                const results = doc.querySelectorAll("[on\\\\:qvisible]");\n                if (results.length > 0) {\n                    const observer = new IntersectionObserver((entries => {\n                        for (const entry of entries) {\n                            if (entry.isIntersecting) {\n                                observer.unobserve(entry.target);\n                                dispatch(entry.target, "", "qvisible", createEvent("qvisible", entry));\n                            }\n                        }\n                    }));\n                    results.forEach((el => observer.observe(el)));\n                }\n            }\n        };\n        const events = new Set;\n        const push = eventNames => {\n            for (const eventName of eventNames) {\n                if (!events.has(eventName)) {\n                    document.addEventListener(eventName, processDocumentEvent, {\n                        capture: !0\n                    });\n                    win.addEventListener(eventName, processWindowEvent);\n                    events.add(eventName);\n                }\n            }\n        };\n        if (!doc.qR) {\n            const qwikevents = win.qwikevents;\n            Array.isArray(qwikevents) && push(qwikevents);\n            win.qwikevents = {\n                push: (...e) => push(e)\n            };\n            doc.addEventListener("readystatechange", processReadyStateChange);\n            processReadyStateChange();\n        }\n    })(document);\n})();';
 function getQwikLoaderScript(opts = {}) {
   if (Array.isArray(opts.events) && opts.events.length > 0) {
     const loader = opts.debug ? QWIK_LOADER_OPTIMIZE_DEBUG : QWIK_LOADER_OPTIMIZE_MINIFIED;
     return loader.replace("window.qEvents", JSON.stringify(opts.events));
   }
   return opts.debug ? QWIK_LOADER_DEFAULT_DEBUG : QWIK_LOADER_DEFAULT_MINIFIED;
+}
+function getPrefetchResources(snapshotResult, opts, resolvedManifest) {
+  if (!resolvedManifest) {
+    return [];
+  }
+  const prefetchStrategy = opts.prefetchStrategy;
+  const buildBase = getBuildBase(opts);
+  if (prefetchStrategy !== null) {
+    if (!prefetchStrategy || !prefetchStrategy.symbolsToPrefetch || prefetchStrategy.symbolsToPrefetch === "auto") {
+      return getAutoPrefetch(snapshotResult, resolvedManifest, buildBase);
+    }
+    if (typeof prefetchStrategy.symbolsToPrefetch === "function") {
+      try {
+        return prefetchStrategy.symbolsToPrefetch({ manifest: resolvedManifest.manifest });
+      } catch (e) {
+        console.error("getPrefetchUrls, symbolsToPrefetch()", e);
+      }
+    }
+  }
+  return [];
+}
+function getAutoPrefetch(snapshotResult, resolvedManifest, buildBase) {
+  const prefetchResources = [];
+  const listeners = snapshotResult == null ? void 0 : snapshotResult.listeners;
+  const stateObjs = snapshotResult == null ? void 0 : snapshotResult.objs;
+  const { mapper, manifest: manifest2 } = resolvedManifest;
+  const urls = /* @__PURE__ */ new Set();
+  if (Array.isArray(listeners)) {
+    for (const prioritizedSymbolName in mapper) {
+      const hasSymbol = listeners.some((l) => {
+        return l.qrl.getHash() === prioritizedSymbolName;
+      });
+      if (hasSymbol) {
+        addBundle(manifest2, urls, prefetchResources, buildBase, mapper[prioritizedSymbolName][1]);
+      }
+    }
+  }
+  if (Array.isArray(stateObjs)) {
+    for (const obj of stateObjs) {
+      if (isQrl(obj)) {
+        const qrlSymbolName = obj.getHash();
+        const resolvedSymbol = mapper[qrlSymbolName];
+        if (resolvedSymbol) {
+          addBundle(manifest2, urls, prefetchResources, buildBase, resolvedSymbol[0]);
+        }
+      }
+    }
+  }
+  return prefetchResources;
+}
+function addBundle(manifest2, urls, prefetchResources, buildBase, bundleFileName) {
+  const url = buildBase + bundleFileName;
+  if (!urls.has(url)) {
+    urls.add(url);
+    const bundle = manifest2.bundles[bundleFileName];
+    if (bundle) {
+      const prefetchResource = {
+        url,
+        imports: []
+      };
+      prefetchResources.push(prefetchResource);
+      if (Array.isArray(bundle.imports)) {
+        for (const importedFilename of bundle.imports) {
+          addBundle(manifest2, urls, prefetchResource.imports, buildBase, importedFilename);
+        }
+      }
+    }
+  }
+}
+var isQrl = (value) => {
+  return typeof value === "function" && typeof value.getSymbol === "function";
+};
+var qDev = globalThis.qDev === true;
+var EMPTY_ARRAY = [];
+var EMPTY_OBJ = {};
+if (qDev) {
+  Object.freeze(EMPTY_ARRAY);
+  Object.freeze(EMPTY_OBJ);
+  Error.stackTraceLimit = 9999;
+}
+[
+  "click",
+  "dblclick",
+  "contextmenu",
+  "auxclick",
+  "pointerdown",
+  "pointerup",
+  "pointermove",
+  "pointerover",
+  "pointerenter",
+  "pointerleave",
+  "pointerout",
+  "pointercancel",
+  "gotpointercapture",
+  "lostpointercapture",
+  "touchstart",
+  "touchend",
+  "touchmove",
+  "touchcancel",
+  "mousedown",
+  "mouseup",
+  "mousemove",
+  "mouseenter",
+  "mouseleave",
+  "mouseover",
+  "mouseout",
+  "wheel",
+  "gesturestart",
+  "gesturechange",
+  "gestureend",
+  "keydown",
+  "keyup",
+  "keypress",
+  "input",
+  "change",
+  "search",
+  "invalid",
+  "beforeinput",
+  "select",
+  "focusin",
+  "focusout",
+  "focus",
+  "blur",
+  "submit",
+  "reset",
+  "scroll"
+].map((n) => `on${n.toLowerCase()}$`);
+[
+  "useWatch$",
+  "useClientEffect$",
+  "useEffect$",
+  "component$",
+  "useStyles$",
+  "useStylesScoped$"
+].map((n) => n.toLowerCase());
+function getValidManifest(manifest2) {
+  if (manifest2 != null && manifest2.mapping != null && typeof manifest2.mapping === "object" && manifest2.symbols != null && typeof manifest2.symbols === "object" && manifest2.bundles != null && typeof manifest2.bundles === "object") {
+    return manifest2;
+  }
+  return void 0;
 }
 function workerFetchScript() {
   const fetch2 = `Promise.all(e.data.map(u=>fetch(u))).finally(()=>{setTimeout(postMessage({}),9999)})`;
@@ -5123,200 +3480,39 @@ function normalizePrefetchImplementation(input) {
   };
   return defaultImplementation;
 }
-[
-  "click",
-  "dblclick",
-  "contextmenu",
-  "auxclick",
-  "pointerdown",
-  "pointerup",
-  "pointermove",
-  "pointerover",
-  "pointerenter",
-  "pointerleave",
-  "pointerout",
-  "pointercancel",
-  "gotpointercapture",
-  "lostpointercapture",
-  "touchstart",
-  "touchend",
-  "touchmove",
-  "touchcancel",
-  "mousedown",
-  "mouseup",
-  "mousemove",
-  "mouseenter",
-  "mouseleave",
-  "mouseover",
-  "mouseout",
-  "wheel",
-  "gesturestart",
-  "gesturechange",
-  "gestureend",
-  "keydown",
-  "keyup",
-  "keypress",
-  "input",
-  "change",
-  "search",
-  "invalid",
-  "beforeinput",
-  "select",
-  "focusin",
-  "focusout",
-  "focus",
-  "blur",
-  "submit",
-  "reset",
-  "scroll"
-].map((n) => `on${n.toLowerCase()}$`);
-[
-  "useWatch$",
-  "useClientEffect$",
-  "useEffect$",
-  "component$",
-  "useStyles$",
-  "useStylesScoped$"
-].map((n) => n.toLowerCase());
-function getValidManifest(manifest2) {
-  if (manifest2 != null && manifest2.mapping != null && typeof manifest2.mapping === "object" && manifest2.symbols != null && typeof manifest2.symbols === "object" && manifest2.bundles != null && typeof manifest2.bundles === "object") {
-    return manifest2;
-  }
-  return void 0;
-}
-function getPrefetchResources(snapshotResult, opts, mapper) {
-  const manifest2 = getValidManifest(opts.manifest);
-  if (manifest2 && mapper) {
-    const prefetchStrategy = opts.prefetchStrategy;
-    const buildBase = getBuildBase(opts);
-    if (prefetchStrategy !== null) {
-      if (!prefetchStrategy || !prefetchStrategy.symbolsToPrefetch || prefetchStrategy.symbolsToPrefetch === "auto") {
-        return getAutoPrefetch(snapshotResult, manifest2, mapper, buildBase);
-      }
-      if (typeof prefetchStrategy.symbolsToPrefetch === "function") {
-        try {
-          return prefetchStrategy.symbolsToPrefetch({ manifest: manifest2 });
-        } catch (e) {
-          console.error("getPrefetchUrls, symbolsToPrefetch()", e);
-        }
-      }
-    }
-  }
-  return [];
-}
-function getAutoPrefetch(snapshotResult, manifest2, mapper, buildBase) {
-  const prefetchResources = [];
-  const listeners = snapshotResult == null ? void 0 : snapshotResult.listeners;
-  const stateObjs = snapshotResult == null ? void 0 : snapshotResult.objs;
-  const urls = /* @__PURE__ */ new Set();
-  if (Array.isArray(listeners)) {
-    for (const prioritizedSymbolName in mapper) {
-      const hasSymbol = listeners.some((l) => {
-        return l.qrl.getHash() === prioritizedSymbolName;
-      });
-      if (hasSymbol) {
-        addBundle(manifest2, urls, prefetchResources, buildBase, mapper[prioritizedSymbolName][1]);
-      }
-    }
-  }
-  if (Array.isArray(stateObjs)) {
-    for (const obj of stateObjs) {
-      if (isQrl(obj)) {
-        const qrlSymbolName = obj.getHash();
-        const resolvedSymbol = mapper[qrlSymbolName];
-        if (resolvedSymbol) {
-          addBundle(manifest2, urls, prefetchResources, buildBase, resolvedSymbol[0]);
-        }
-      }
-    }
-  }
-  return prefetchResources;
-}
-function addBundle(manifest2, urls, prefetchResources, buildBase, bundleFileName) {
-  const url = buildBase + bundleFileName;
-  if (!urls.has(url)) {
-    urls.add(url);
-    const bundle = manifest2.bundles[bundleFileName];
-    if (bundle) {
-      const prefetchResource = {
-        url,
-        imports: []
-      };
-      prefetchResources.push(prefetchResource);
-      if (Array.isArray(bundle.imports)) {
-        for (const importedFilename of bundle.imports) {
-          addBundle(manifest2, urls, prefetchResource.imports, buildBase, importedFilename);
-        }
-      }
-    }
-  }
-}
-var isQrl = (value) => {
-  return typeof value === "function" && typeof value.getSymbol === "function";
-};
-function createEl(tagName, doc) {
-  return {
-    nodeType: tagName === ":virtual" ? 111 : 1,
-    nodeName: tagName.toUpperCase(),
-    localName: tagName,
-    ownerDocument: doc,
-    isConnected: true,
-    _qc_: null,
-    __virtual: null,
-    "q:id": null
-  };
-}
-function createSimpleDocument() {
-  const doc = {
-    nodeType: 9,
-    parentElement: null,
-    ownerDocument: null,
-    createElement(tagName) {
-      return createEl(tagName, doc);
-    }
-  };
-  return doc;
-}
-var qDev = globalThis.qDev === true;
-var EMPTY_ARRAY = [];
-var EMPTY_OBJ = {};
-if (qDev) {
-  Object.freeze(EMPTY_ARRAY);
-  Object.freeze(EMPTY_OBJ);
-  Error.stackTraceLimit = 9999;
-}
 var DOCTYPE = "<!DOCTYPE html>";
 async function renderToStream(rootNode, opts) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f;
   let stream = opts.stream;
   let bufferSize = 0;
   let totalSize = 0;
   let networkFlushes = 0;
   let firstFlushTime = 0;
-  const doc = createSimpleDocument();
   const inOrderStreaming = (_b = (_a = opts.streaming) == null ? void 0 : _a.inOrder) != null ? _b : {
     strategy: "auto",
-    initialChunkSize: 3e4,
-    minimunChunkSize: 1024
+    maximunInitialChunk: 5e4,
+    maximunChunk: 3e4
   };
   const containerTagName = (_c = opts.containerTagName) != null ? _c : "html";
   const containerAttributes = (_d = opts.containerAttributes) != null ? _d : {};
-  const buffer = [];
+  let buffer = "";
   const nativeStream = stream;
   const firstFlushTimer = createTimer();
   function flush() {
-    buffer.forEach((chunk) => nativeStream.write(chunk));
-    buffer.length = 0;
-    bufferSize = 0;
-    networkFlushes++;
-    if (networkFlushes === 1) {
-      firstFlushTime = firstFlushTimer();
+    if (buffer) {
+      nativeStream.write(buffer);
+      buffer = "";
+      bufferSize = 0;
+      networkFlushes++;
+      if (networkFlushes === 1) {
+        firstFlushTime = firstFlushTimer();
+      }
     }
   }
   function enqueue(chunk) {
     bufferSize += chunk.length;
     totalSize += chunk.length;
-    buffer.push(chunk);
+    buffer += chunk;
   }
   switch (inOrderStreaming.strategy) {
     case "disabled":
@@ -5324,20 +3520,28 @@ async function renderToStream(rootNode, opts) {
         write: enqueue
       };
       break;
+    case "direct":
+      stream = nativeStream;
+      break;
     case "auto":
       let count = 0;
-      const minimunChunkSize = (_e = inOrderStreaming.minimunChunkSize) != null ? _e : 0;
-      const initialChunkSize = (_f = inOrderStreaming.initialChunkSize) != null ? _f : 0;
+      let forceFlush = false;
+      const minimunChunkSize = (_e = inOrderStreaming.maximunChunk) != null ? _e : 0;
+      const initialChunkSize = (_f = inOrderStreaming.maximunInitialChunk) != null ? _f : 0;
       stream = {
         write(chunk) {
-          enqueue(chunk);
-          if (chunk === "<!--qkssr-pu-->") {
+          if (chunk === "<!--qkssr-f-->") {
+            forceFlush || (forceFlush = true);
+          } else if (chunk === "<!--qkssr-pu-->") {
             count++;
-          } else if (count > 0 && chunk === "<!--qkssr-po-->") {
+          } else if (chunk === "<!--qkssr-po-->") {
             count--;
+          } else {
+            enqueue(chunk);
           }
           const chunkSize = networkFlushes === 0 ? initialChunkSize : minimunChunkSize;
-          if (count === 0 && bufferSize >= chunkSize) {
+          if (count === 0 && (forceFlush || bufferSize >= chunkSize)) {
+            forceFlush = false;
             flush();
           }
         }
@@ -5364,20 +3568,20 @@ async function renderToStream(rootNode, opts) {
     console.warn("Missing client manifest, loading symbols in the client might 404");
   }
   const buildBase = getBuildBase(opts);
-  const mapper = computeSymbolMapper(opts.manifest);
-  await setServerPlatform(doc, opts, mapper);
+  const resolvedManifest = resolveManifest(opts.manifest);
+  await setServerPlatform(opts, resolvedManifest);
   let prefetchResources = [];
   let snapshotResult = null;
-  const injections = (_g = opts.manifest) == null ? void 0 : _g.injections;
+  const injections = resolvedManifest == null ? void 0 : resolvedManifest.manifest.injections;
   const beforeContent = injections ? injections.map((injection) => {
     var _a2;
     return jsx(injection.tag, (_a2 = injection.attributes) != null ? _a2 : EMPTY_OBJ);
   }) : void 0;
   const renderTimer = createTimer();
+  const renderSymbols = [];
   let renderTime = 0;
   let snapshotTime = 0;
-  const renderSymbols = [];
-  await renderSSR(doc, rootNode, {
+  await renderSSR(rootNode, {
     stream,
     containerTagName,
     containerAttributes,
@@ -5389,7 +3593,7 @@ async function renderToStream(rootNode, opts) {
       renderTime = renderTimer();
       const snapshotTimer = createTimer();
       snapshotResult = await _pauseFromContexts(contexts, containerState);
-      prefetchResources = getPrefetchResources(snapshotResult, opts, mapper);
+      prefetchResources = getPrefetchResources(snapshotResult, opts, resolvedManifest);
       const jsonData = JSON.stringify(snapshotResult.state, void 0, qDev ? "  " : void 0);
       const children = [
         jsx("script", {
@@ -5415,6 +3619,22 @@ async function renderToStream(rootNode, opts) {
           })
         );
       }
+      const uniqueListeners = /* @__PURE__ */ new Set();
+      snapshotResult.listeners.forEach((li) => {
+        uniqueListeners.add(JSON.stringify(li.eventName));
+      });
+      const extraListeners = Array.from(uniqueListeners);
+      if (extraListeners.length > 0) {
+        let content = `window.qwikevents.push(${extraListeners.join(", ")})`;
+        if (!includeLoader) {
+          content = `window.qwikevents||=[];${content}`;
+        }
+        children.push(
+          jsx("script", {
+            dangerouslySetInnerHTML: content
+          })
+        );
+      }
       collectRenderSymbols(renderSymbols, contexts);
       snapshotTime = snapshotTimer();
       return jsx(Fragment, { children });
@@ -5422,10 +3642,10 @@ async function renderToStream(rootNode, opts) {
   });
   flush();
   const result = {
-    prefetchResources,
+    prefetchResources: void 0,
     snapshotResult,
     flushes: networkFlushes,
-    manifest: opts.manifest,
+    manifest: resolvedManifest == null ? void 0 : resolvedManifest.manifest,
     size: totalSize,
     timing: {
       render: renderTime,
@@ -5436,13 +3656,23 @@ async function renderToStream(rootNode, opts) {
   };
   return result;
 }
-function computeSymbolMapper(manifest2) {
+function resolveManifest(manifest2) {
+  if (!manifest2) {
+    return void 0;
+  }
+  if ("mapper" in manifest2) {
+    return manifest2;
+  }
+  manifest2 = getValidManifest(manifest2);
   if (manifest2) {
     const mapper = {};
     Object.entries(manifest2.mapping).forEach(([key, value]) => {
       mapper[getSymbolHash(key)] = [key, value];
     });
-    return mapper;
+    return {
+      mapper,
+      manifest: manifest2
+    };
   }
   return void 0;
 }
@@ -5458,961 +3688,14 @@ function collectRenderSymbols(renderSymbols, elements) {
     }
   }
 }
-const manifest = { "symbols": { "s_PeDTn2z80A4": { "origin": "components/post/post.tsx", "displayName": "Post_component__Fragment_div_div_div_h1_onClick", "canonicalFilename": "s_pedtn2z80a4", "hash": "PeDTn2z80A4", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_bSNo02BOSeo" }, "s_TlrTEIpSGyw": { "origin": "routes/index@index.tsx", "displayName": "index_index_component__Fragment_div_div_onClick", "canonicalFilename": "s_tlrteipsgyw", "hash": "TlrTEIpSGyw", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_0e3es3vnWuk" }, "s_hA9UPaY8sNQ": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component_a_onClick", "canonicalFilename": "s_ha9upay8snq", "hash": "hA9UPaY8sNQ", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_mYsiJcA4IBc" }, "s_p8802htc8lU": { "origin": "routes/index@index.tsx", "displayName": "index_index_component__Fragment_div_div_div_div_button_onClick", "canonicalFilename": "s_p8802htc8lu", "hash": "p8802htc8lU", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_0e3es3vnWuk" }, "s_t8Q6Qpbu0pE": { "origin": "routes/index@index.tsx", "displayName": "index_index_component__Fragment_div_button_onClick", "canonicalFilename": "s_t8q6qpbu0pe", "hash": "t8Q6Qpbu0pE", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_0e3es3vnWuk" }, "s_skxgNVWVOT8": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component_a_onMouseOver", "canonicalFilename": "s_skxgnvwvot8", "hash": "skxgNVWVOT8", "ctxKind": "event", "ctxName": "onMouseOver$", "captures": true, "parent": "s_mYsiJcA4IBc" }, "s_uVE5iM9H73c": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component_a_onQVisible", "canonicalFilename": "s_uve5im9h73c", "hash": "uVE5iM9H73c", "ctxKind": "event", "ctxName": "onQVisible$", "captures": true, "parent": "s_mYsiJcA4IBc" }, "s_AaAlzKH0KlQ": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "QwikCity_component_useWatch", "canonicalFilename": "s_aaalzkh0klq", "hash": "AaAlzKH0KlQ", "ctxKind": "function", "ctxName": "useWatch$", "captures": true, "parent": "s_z1nvHyEppoI" }, "s_06hTRPZlBNE": { "origin": "root.tsx", "displayName": "root_component", "canonicalFilename": "s_06htrpzlbne", "hash": "06hTRPZlBNE", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_0e3es3vnWuk": { "origin": "routes/index@index.tsx", "displayName": "index_index_component", "canonicalFilename": "s_0e3es3vnwuk", "hash": "0e3es3vnWuk", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_26hfKJ9I4hk": { "origin": "routes/profile/[proid]/index@profile.tsx", "displayName": "index_profile_component", "canonicalFilename": "s_26hfkj9i4hk", "hash": "26hfKJ9I4hk", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_BtnGjf3PdHw": { "origin": "components/sidebar/sidebar.tsx", "displayName": "Sidebar_component", "canonicalFilename": "s_btngjf3pdhw", "hash": "BtnGjf3PdHw", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_NcbFhH0Rq0M": { "origin": "routes/layout-index.tsx", "displayName": "layout_index_component", "canonicalFilename": "s_ncbfhh0rq0m", "hash": "NcbFhH0Rq0M", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_Xo5tmaGPZOs": { "origin": "routes/posts/[postid]/index.tsx", "displayName": "_postid__component", "canonicalFilename": "s_xo5tmagpzos", "hash": "Xo5tmaGPZOs", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_aeoMBoP047Y": { "origin": "routes/profile/[proid]/layout-profile.tsx", "displayName": "layout_profile_component", "canonicalFilename": "s_aeombop047y", "hash": "aeoMBoP047Y", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_bSNo02BOSeo": { "origin": "components/post/post.tsx", "displayName": "Post_component", "canonicalFilename": "s_bsno02boseo", "hash": "bSNo02BOSeo", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_gm3f0H6v3fA": { "origin": "components/header/header.tsx", "displayName": "Header_component", "canonicalFilename": "s_gm3f0h6v3fa", "hash": "gm3f0H6v3fA", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_j5h3enAr0HE": { "origin": "routes/clips/index.tsx", "displayName": "clips_component", "canonicalFilename": "s_j5h3enar0he", "hash": "j5h3enAr0HE", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_mYsiJcA4IBc": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component", "canonicalFilename": "s_mysijca4ibc", "hash": "mYsiJcA4IBc", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_n0b0sGHmkUY": { "origin": "routes/favs/index.tsx", "displayName": "favs_component", "canonicalFilename": "s_n0b0sghmkuy", "hash": "n0b0sGHmkUY", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_nd8yk3KO22c": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "RouterOutlet_component", "canonicalFilename": "s_nd8yk3ko22c", "hash": "nd8yk3KO22c", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_tD1BXnbDybA": { "origin": "routes/settings/index.tsx", "displayName": "settings_component", "canonicalFilename": "s_td1bxnbdyba", "hash": "tD1BXnbDybA", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_uaqIf5ac0DY": { "origin": "routes/vids/index.tsx", "displayName": "vids_component", "canonicalFilename": "s_uaqif5ac0dy", "hash": "uaqIf5ac0DY", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_uwWhp2E5O4I": { "origin": "components/menu/menu.tsx", "displayName": "Menu_component", "canonicalFilename": "s_uwwhp2e5o4i", "hash": "uwWhp2E5O4I", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_yM0L9NCDGUk": { "origin": "routes/layout.tsx", "displayName": "layout_component", "canonicalFilename": "s_ym0l9ncdguk", "hash": "yM0L9NCDGUk", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_z1nvHyEppoI": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "QwikCity_component", "canonicalFilename": "s_z1nvhyeppoi", "hash": "z1nvHyEppoI", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_zgN7XgNXC7Q": { "origin": "components/head/head.tsx", "displayName": "Head_component", "canonicalFilename": "s_zgn7xgnxc7q", "hash": "zgN7XgNXC7Q", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_WZUT0oi3I0A": { "origin": "root.tsx", "displayName": "root_component_useStyles", "canonicalFilename": "s_wzut0oi3i0a", "hash": "WZUT0oi3I0A", "ctxKind": "function", "ctxName": "useStyles$", "captures": false, "parent": "s_06hTRPZlBNE" } }, "mapping": { "s_PeDTn2z80A4": "q-b4c7c099.js", "s_TlrTEIpSGyw": "q-687fbe22.js", "s_hA9UPaY8sNQ": "q-4a5fa1e1.js", "s_p8802htc8lU": "q-687fbe22.js", "s_t8Q6Qpbu0pE": "q-687fbe22.js", "s_skxgNVWVOT8": "q-4a5fa1e1.js", "s_uVE5iM9H73c": "q-4a5fa1e1.js", "s_AaAlzKH0KlQ": "q-b4621644.js", "s_06hTRPZlBNE": "q-2b6484ca.js", "s_0e3es3vnWuk": "q-687fbe22.js", "s_26hfKJ9I4hk": "q-03e9941d.js", "s_BtnGjf3PdHw": "q-6232aac8.js", "s_NcbFhH0Rq0M": "q-9e917870.js", "s_Xo5tmaGPZOs": "q-8735d118.js", "s_aeoMBoP047Y": "q-c5f2b5d0.js", "s_bSNo02BOSeo": "q-b4c7c099.js", "s_gm3f0H6v3fA": "q-80fbf83e.js", "s_j5h3enAr0HE": "q-860f6b19.js", "s_mYsiJcA4IBc": "q-4a5fa1e1.js", "s_n0b0sGHmkUY": "q-47cb966c.js", "s_nd8yk3KO22c": "q-0176c64b.js", "s_tD1BXnbDybA": "q-f0ab9a98.js", "s_uaqIf5ac0DY": "q-55884fb1.js", "s_uwWhp2E5O4I": "q-07309be4.js", "s_yM0L9NCDGUk": "q-1f04af5a.js", "s_z1nvHyEppoI": "q-b4621644.js", "s_zgN7XgNXC7Q": "q-bb1f9e8a.js", "s_WZUT0oi3I0A": "q-2b6484ca.js" }, "bundles": { "q-0176c64b.js": { "size": 269, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "origins": ["src/entry_RouterOutlet.js", "src/s_nd8yk3ko22c.js"], "symbols": ["s_nd8yk3KO22c"] }, "q-03e9941d.js": { "size": 178, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "origins": ["src/entry_index_profile.js", "src/s_26hfkj9i4hk.js"], "symbols": ["s_26hfKJ9I4hk"] }, "q-07309be4.js": { "size": 2286, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "origins": ["src/entry_Menu.js", "src/s_uwwhp2e5o4i.js"], "symbols": ["s_uwWhp2E5O4I"] }, "q-1288b5e3.js": { "size": 180, "imports": ["q-65badc42.js"], "dynamicImports": ["q-55884fb1.js"], "origins": ["src/routes/vids/index.js"] }, "q-1439a3ac.js": { "size": 712, "imports": ["q-65badc42.js"], "dynamicImports": ["q-03e9941d.js"], "origins": ["src/routes/profile/[proid]/index@profile.js"] }, "q-15642003.js": { "size": 714, "imports": ["q-65badc42.js"], "dynamicImports": ["q-c5f2b5d0.js"], "origins": ["src/routes/profile/[proid]/layout-profile.js"] }, "q-1a063a29.js": { "size": 158, "imports": ["q-65badc42.js"], "dynamicImports": ["q-9e917870.js"], "origins": ["src/routes/layout-index.js"] }, "q-1f04af5a.js": { "size": 292, "imports": ["q-65badc42.js", "q-d0d0dbfd.js"], "origins": ["src/entry_layout.js", "src/s_ym0l9ncdguk.js"], "symbols": ["s_yM0L9NCDGUk"] }, "q-237c0038.js": { "size": 158, "imports": ["q-65badc42.js"], "dynamicImports": ["q-1f04af5a.js"], "origins": ["src/routes/layout.js"] }, "q-25e8cbed.js": { "size": 180, "imports": ["q-65badc42.js"], "dynamicImports": ["q-687fbe22.js"], "origins": ["src/routes/index@index.js"] }, "q-2b6484ca.js": { "size": 30511, "imports": ["q-65badc42.js"], "dynamicImports": ["q-0176c64b.js", "q-4a5fa1e1.js", "q-b4621644.js", "q-bb1f9e8a.js"], "origins": ["node_modules/@builder.io/qwik-city/index.qwik.mjs", "src/components/head/head.js", "src/entry_root.js", "src/modern.css?used", "src/s_06htrpzlbne.js", "src/s_wzut0oi3i0a.js"], "symbols": ["s_06hTRPZlBNE", "s_WZUT0oi3I0A"] }, "q-47cb966c.js": { "size": 128, "imports": ["q-65badc42.js"], "origins": ["src/entry_favs.js", "src/s_n0b0sghmkuy.js"], "symbols": ["s_n0b0sGHmkUY"] }, "q-4a5fa1e1.js": { "size": 922, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "origins": ["src/entry_Link.js", "src/s_ha9upay8snq.js", "src/s_mysijca4ibc.js", "src/s_skxgnvwvot8.js", "src/s_uve5im9h73c.js"], "symbols": ["s_hA9UPaY8sNQ", "s_mYsiJcA4IBc", "s_skxgNVWVOT8", "s_uVE5iM9H73c"] }, "q-55884fb1.js": { "size": 128, "imports": ["q-65badc42.js"], "origins": ["src/entry_vids.js", "src/s_uaqif5ac0dy.js"], "symbols": ["s_uaqIf5ac0DY"] }, "q-5dd1a945.js": { "size": 180, "imports": ["q-65badc42.js"], "dynamicImports": ["q-47cb966c.js"], "origins": ["src/routes/favs/index.js"] }, "q-6232aac8.js": { "size": 3494, "imports": ["q-65badc42.js"], "origins": ["src/entry_Sidebar.js", "src/s_btngjf3pdhw.js"], "symbols": ["s_BtnGjf3PdHw"] }, "q-65badc42.js": { "size": 33254, "dynamicImports": ["q-2b6484ca.js"], "origins": ["\0vite/preload-helper", "node_modules/@builder.io/qwik/core.min.mjs", "src/root.js"] }, "q-687fbe22.js": { "size": 8194, "imports": ["q-65badc42.js"], "dynamicImports": ["q-b4c7c099.js"], "origins": ["src/components/post/post.js", "src/entry_index_index.js", "src/s_0e3es3vnwuk.js", "src/s_p8802htc8lu.js", "src/s_t8q6qpbu0pe.js", "src/s_tlrteipsgyw.js"], "symbols": ["s_0e3es3vnWuk", "s_p8802htc8lU", "s_t8Q6Qpbu0pE", "s_TlrTEIpSGyw"] }, "q-80fbf83e.js": { "size": 104, "imports": ["q-65badc42.js"], "origins": ["src/entry_Header.js", "src/s_gm3f0h6v3fa.js"], "symbols": ["s_gm3f0H6v3fA"] }, "q-860f6b19.js": { "size": 128, "imports": ["q-65badc42.js"], "origins": ["src/entry_clips.js", "src/s_j5h3enar0he.js"], "symbols": ["s_j5h3enAr0HE"] }, "q-8735d118.js": { "size": 1587, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "origins": ["src/entry__postid_.js", "src/s_xo5tmagpzos.js"], "symbols": ["s_Xo5tmaGPZOs"] }, "q-9c36486d.js": { "size": 58, "imports": ["q-65badc42.js"] }, "q-9e917870.js": { "size": 297, "imports": ["q-65badc42.js", "q-d0d0dbfd.js"], "origins": ["src/entry_layout_index.js", "src/s_ncbfhh0rq0m.js"], "symbols": ["s_NcbFhH0Rq0M"] }, "q-b4621644.js": { "size": 1489, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "dynamicImports": ["q-df1454c4.js"], "origins": ["@builder.io/qwik/build", "src/entry_QwikCity.js", "src/s_aaalzkh0klq.js", "src/s_z1nvhyeppoi.js"], "symbols": ["s_AaAlzKH0KlQ", "s_z1nvHyEppoI"] }, "q-b4c7c099.js": { "size": 1847, "imports": ["q-65badc42.js"], "origins": ["src/entry_Post.js", "src/s_bsno02boseo.js", "src/s_pedtn2z80a4.js"], "symbols": ["s_bSNo02BOSeo", "s_PeDTn2z80A4"] }, "q-b4c84de9.js": { "size": 158, "imports": ["q-65badc42.js"], "dynamicImports": ["q-8735d118.js"], "origins": ["src/routes/posts/[postid]/index.js"] }, "q-bb1f9e8a.js": { "size": 893, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "origins": ["src/entry_Head.js", "src/s_zgn7xgnxc7q.js"], "symbols": ["s_zgN7XgNXC7Q"] }, "q-c5f2b5d0.js": { "size": 1559, "imports": ["q-2b6484ca.js", "q-65badc42.js"], "origins": ["src/entry_layout_profile.js", "src/s_aeombop047y.js"], "symbols": ["s_aeoMBoP047Y"] }, "q-d0d0dbfd.js": { "size": 326, "imports": ["q-65badc42.js"], "dynamicImports": ["q-07309be4.js", "q-6232aac8.js", "q-80fbf83e.js"], "origins": ["src/components/header/header.js", "src/components/menu/menu.js", "src/components/sidebar/sidebar.js"] }, "q-df1454c4.js": { "size": 900, "imports": ["q-65badc42.js"], "dynamicImports": ["q-1288b5e3.js", "q-1439a3ac.js", "q-15642003.js", "q-1a063a29.js", "q-237c0038.js", "q-25e8cbed.js", "q-5dd1a945.js", "q-b4c84de9.js", "q-e582bef0.js", "q-f089809a.js"], "origins": ["@qwik-city-plan"] }, "q-e582bef0.js": { "size": 189, "imports": ["q-65badc42.js"], "dynamicImports": ["q-f0ab9a98.js"], "origins": ["src/routes/settings/index.js"] }, "q-f089809a.js": { "size": 181, "imports": ["q-65badc42.js"], "dynamicImports": ["q-860f6b19.js"], "origins": ["src/routes/clips/index.js"] }, "q-f0ab9a98.js": { "size": 128, "imports": ["q-65badc42.js"], "origins": ["src/entry_settings.js", "src/s_td1bxnbdyba.js"], "symbols": ["s_tD1BXnbDybA"] } }, "injections": [{ "tag": "link", "location": "head", "attributes": { "rel": "stylesheet", "href": "/build/q-30a9d718.css" } }], "version": "1", "options": { "target": "client", "buildMode": "production", "forceFullBuild": true, "entryStrategy": { "type": "smart" } }, "platform": { "qwik": "0.0.108", "vite": "", "rollup": "2.77.3", "env": "node", "os": "linux", "node": "18.8.0" } };
+const manifest = { "symbols": { "s_TlrTEIpSGyw": { "origin": "routes/index@index.tsx", "displayName": "index_index_component__Fragment_div_div_onClick", "canonicalFilename": "s_tlrteipsgyw", "hash": "TlrTEIpSGyw", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_0e3es3vnWuk" }, "s_hA9UPaY8sNQ": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component_a_onClick", "canonicalFilename": "s_ha9upay8snq", "hash": "hA9UPaY8sNQ", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_mYsiJcA4IBc" }, "s_p8802htc8lU": { "origin": "routes/index@index.tsx", "displayName": "index_index_component__Fragment_div_div_div_div_button_onClick", "canonicalFilename": "s_p8802htc8lu", "hash": "p8802htc8lU", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_0e3es3vnWuk" }, "s_sI2nNmZV8Kk": { "origin": "routes/index@index.tsx", "displayName": "index_index_component__Fragment_div_div_button_onClick", "canonicalFilename": "s_si2nnmzv8kk", "hash": "sI2nNmZV8Kk", "ctxKind": "event", "ctxName": "onClick$", "captures": true, "parent": "s_0e3es3vnWuk" }, "s_skxgNVWVOT8": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component_a_onMouseOver", "canonicalFilename": "s_skxgnvwvot8", "hash": "skxgNVWVOT8", "ctxKind": "event", "ctxName": "onMouseOver$", "captures": false, "parent": "s_mYsiJcA4IBc" }, "s_uVE5iM9H73c": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component_a_onQVisible", "canonicalFilename": "s_uve5im9h73c", "hash": "uVE5iM9H73c", "ctxKind": "event", "ctxName": "onQVisible$", "captures": false, "parent": "s_mYsiJcA4IBc" }, "s_AaAlzKH0KlQ": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "QwikCity_component_useWatch", "canonicalFilename": "s_aaalzkh0klq", "hash": "AaAlzKH0KlQ", "ctxKind": "function", "ctxName": "useWatch$", "captures": true, "parent": "s_z1nvHyEppoI" }, "s_06hTRPZlBNE": { "origin": "root.tsx", "displayName": "root_component", "canonicalFilename": "s_06htrpzlbne", "hash": "06hTRPZlBNE", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_0e3es3vnWuk": { "origin": "routes/index@index.tsx", "displayName": "index_index_component", "canonicalFilename": "s_0e3es3vnwuk", "hash": "0e3es3vnWuk", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_26hfKJ9I4hk": { "origin": "routes/profile/[proid]/index@profile.tsx", "displayName": "index_profile_component", "canonicalFilename": "s_26hfkj9i4hk", "hash": "26hfKJ9I4hk", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_BtnGjf3PdHw": { "origin": "components/sidebar/sidebar.tsx", "displayName": "Sidebar_component", "canonicalFilename": "s_btngjf3pdhw", "hash": "BtnGjf3PdHw", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_NcbFhH0Rq0M": { "origin": "routes/layout-index.tsx", "displayName": "layout_index_component", "canonicalFilename": "s_ncbfhh0rq0m", "hash": "NcbFhH0Rq0M", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_Xo5tmaGPZOs": { "origin": "routes/posts/[postid]/index.tsx", "displayName": "_postid__component", "canonicalFilename": "s_xo5tmagpzos", "hash": "Xo5tmaGPZOs", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_aeoMBoP047Y": { "origin": "routes/profile/[proid]/layout-profile.tsx", "displayName": "layout_profile_component", "canonicalFilename": "s_aeombop047y", "hash": "aeoMBoP047Y", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_gm3f0H6v3fA": { "origin": "components/header/header.tsx", "displayName": "Header_component", "canonicalFilename": "s_gm3f0h6v3fa", "hash": "gm3f0H6v3fA", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_iYmIWuy4aaw": { "origin": "routes/search/index.tsx", "displayName": "search_component", "canonicalFilename": "s_iymiwuy4aaw", "hash": "iYmIWuy4aaw", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_j5h3enAr0HE": { "origin": "routes/clips/index.tsx", "displayName": "clips_component", "canonicalFilename": "s_j5h3enar0he", "hash": "j5h3enAr0HE", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_mYsiJcA4IBc": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "Link_component", "canonicalFilename": "s_mysijca4ibc", "hash": "mYsiJcA4IBc", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_n0b0sGHmkUY": { "origin": "routes/favs/index.tsx", "displayName": "favs_component", "canonicalFilename": "s_n0b0sghmkuy", "hash": "n0b0sGHmkUY", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_nd8yk3KO22c": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "RouterOutlet_component", "canonicalFilename": "s_nd8yk3ko22c", "hash": "nd8yk3KO22c", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_tD1BXnbDybA": { "origin": "routes/settings/index.tsx", "displayName": "settings_component", "canonicalFilename": "s_td1bxnbdyba", "hash": "tD1BXnbDybA", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_uaqIf5ac0DY": { "origin": "routes/vids/index.tsx", "displayName": "vids_component", "canonicalFilename": "s_uaqif5ac0dy", "hash": "uaqIf5ac0DY", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_uwWhp2E5O4I": { "origin": "components/menu/menu.tsx", "displayName": "Menu_component", "canonicalFilename": "s_uwwhp2e5o4i", "hash": "uwWhp2E5O4I", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_yM0L9NCDGUk": { "origin": "routes/layout.tsx", "displayName": "layout_component", "canonicalFilename": "s_ym0l9ncdguk", "hash": "yM0L9NCDGUk", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_z1nvHyEppoI": { "origin": "../node_modules/@builder.io/qwik-city/index.qwik.mjs", "displayName": "QwikCity_component", "canonicalFilename": "s_z1nvhyeppoi", "hash": "z1nvHyEppoI", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_zgN7XgNXC7Q": { "origin": "components/head/head.tsx", "displayName": "Head_component", "canonicalFilename": "s_zgn7xgnxc7q", "hash": "zgN7XgNXC7Q", "ctxKind": "function", "ctxName": "component$", "captures": false }, "s_WZUT0oi3I0A": { "origin": "root.tsx", "displayName": "root_component_useStyles", "canonicalFilename": "s_wzut0oi3i0a", "hash": "WZUT0oi3I0A", "ctxKind": "function", "ctxName": "useStyles$", "captures": false, "parent": "s_06hTRPZlBNE" } }, "mapping": { "s_TlrTEIpSGyw": "q-6ccd647d.js", "s_hA9UPaY8sNQ": "q-6e2cc303.js", "s_p8802htc8lU": "q-6ccd647d.js", "s_sI2nNmZV8Kk": "q-6ccd647d.js", "s_skxgNVWVOT8": "q-6e2cc303.js", "s_uVE5iM9H73c": "q-6e2cc303.js", "s_AaAlzKH0KlQ": "q-a146121d.js", "s_06hTRPZlBNE": "q-2b4e9944.js", "s_0e3es3vnWuk": "q-6ccd647d.js", "s_26hfKJ9I4hk": "q-2610f2ed.js", "s_BtnGjf3PdHw": "q-fda31d44.js", "s_NcbFhH0Rq0M": "q-6a2595c8.js", "s_Xo5tmaGPZOs": "q-c5e4ad44.js", "s_aeoMBoP047Y": "q-65f6ec94.js", "s_gm3f0H6v3fA": "q-8fe71345.js", "s_iYmIWuy4aaw": "q-00b1c0b2.js", "s_j5h3enAr0HE": "q-e5ea369c.js", "s_mYsiJcA4IBc": "q-6e2cc303.js", "s_n0b0sGHmkUY": "q-178a082b.js", "s_nd8yk3KO22c": "q-625a5d2e.js", "s_tD1BXnbDybA": "q-ac67ece6.js", "s_uaqIf5ac0DY": "q-8cb5daef.js", "s_uwWhp2E5O4I": "q-6070bf01.js", "s_yM0L9NCDGUk": "q-e7858416.js", "s_z1nvHyEppoI": "q-a146121d.js", "s_zgN7XgNXC7Q": "q-200dc796.js", "s_WZUT0oi3I0A": "q-2b4e9944.js" }, "bundles": { "q-00b1c0b2.js": { "size": 128, "imports": ["q-a4dd51f5.js"], "origins": ["src/entry_search.js", "src/s_iymiwuy4aaw.js"], "symbols": ["s_iYmIWuy4aaw"] }, "q-0b3949de.js": { "size": 58, "imports": ["q-a4dd51f5.js"] }, "q-0e6a5856.js": { "size": 158, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-c5e4ad44.js"], "origins": ["src/routes/posts/[postid]/index.js"] }, "q-178a082b.js": { "size": 128, "imports": ["q-a4dd51f5.js"], "origins": ["src/entry_favs.js", "src/s_n0b0sghmkuy.js"], "symbols": ["s_n0b0sGHmkUY"] }, "q-1a30d5a6.js": { "size": 185, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-178a082b.js"], "origins": ["src/routes/favs/index.js"] }, "q-200dc796.js": { "size": 893, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "origins": ["src/entry_Head.js", "src/s_zgn7xgnxc7q.js"], "symbols": ["s_zgN7XgNXC7Q"] }, "q-2021c3b9.js": { "size": 186, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-e5ea369c.js"], "origins": ["src/routes/clips/index.js"] }, "q-2610f2ed.js": { "size": 178, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "origins": ["src/entry_index_profile.js", "src/s_26hfkj9i4hk.js"], "symbols": ["s_26hfKJ9I4hk"] }, "q-2b4e9944.js": { "size": 32229, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-200dc796.js", "q-61deeacf.js", "q-625a5d2e.js", "q-6e2cc303.js", "q-a146121d.js"], "origins": ["node_modules/@builder.io/qwik-city/index.qwik.mjs", "src/components/head/head.js", "src/entry_root.js", "src/modern.css?used", "src/s_06htrpzlbne.js", "src/s_wzut0oi3i0a.js"], "symbols": ["s_06hTRPZlBNE", "s_WZUT0oi3I0A"] }, "q-2d2cbfbc.js": { "size": 158, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-6a2595c8.js"], "origins": ["src/routes/layout-index.js"] }, "q-3906475e.js": { "size": 326, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-6070bf01.js", "q-8fe71345.js", "q-fda31d44.js"], "origins": ["src/components/header/header.js", "src/components/menu/menu.js", "src/components/sidebar/sidebar.js"] }, "q-3972aeac.js": { "size": 185, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-6ccd647d.js"], "origins": ["src/routes/index@index.js"] }, "q-576b246e.js": { "size": 185, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-8cb5daef.js"], "origins": ["src/routes/vids/index.js"] }, "q-6070bf01.js": { "size": 2894, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "origins": ["src/entry_Menu.js", "src/s_uwwhp2e5o4i.js"], "symbols": ["s_uwWhp2E5O4I"] }, "q-61deeacf.js": { "size": 978, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-0e6a5856.js", "q-1a30d5a6.js", "q-2021c3b9.js", "q-2d2cbfbc.js", "q-3972aeac.js", "q-576b246e.js", "q-7a83e723.js", "q-7b714472.js", "q-d640bea0.js", "q-dc060538.js", "q-fbcc2226.js"], "origins": ["@qwik-city-plan"] }, "q-625a5d2e.js": { "size": 269, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "origins": ["src/entry_RouterOutlet.js", "src/s_nd8yk3ko22c.js"], "symbols": ["s_nd8yk3KO22c"] }, "q-65f6ec94.js": { "size": 1559, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "origins": ["src/entry_layout_profile.js", "src/s_aeombop047y.js"], "symbols": ["s_aeoMBoP047Y"] }, "q-6a2595c8.js": { "size": 294, "imports": ["q-3906475e.js", "q-a4dd51f5.js"], "origins": ["src/entry_layout_index.js", "src/s_ncbfhh0rq0m.js"], "symbols": ["s_NcbFhH0Rq0M"] }, "q-6ccd647d.js": { "size": 3552, "imports": ["q-a4dd51f5.js"], "origins": ["src/components/stories/stories.js", "src/entry_index_index.js", "src/s_0e3es3vnwuk.js", "src/s_p8802htc8lu.js", "src/s_si2nnmzv8kk.js", "src/s_tlrteipsgyw.js"], "symbols": ["s_0e3es3vnWuk", "s_p8802htc8lU", "s_sI2nNmZV8Kk", "s_TlrTEIpSGyw"] }, "q-6e2cc303.js": { "size": 891, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "origins": ["src/entry_Link.js", "src/s_ha9upay8snq.js", "src/s_mysijca4ibc.js", "src/s_skxgnvwvot8.js", "src/s_uve5im9h73c.js"], "symbols": ["s_hA9UPaY8sNQ", "s_mYsiJcA4IBc", "s_skxgNVWVOT8", "s_uVE5iM9H73c"] }, "q-7a83e723.js": { "size": 187, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-00b1c0b2.js"], "origins": ["src/routes/search/index.js"] }, "q-7b714472.js": { "size": 712, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-2610f2ed.js"], "origins": ["src/routes/profile/[proid]/index@profile.js"] }, "q-8cb5daef.js": { "size": 128, "imports": ["q-a4dd51f5.js"], "origins": ["src/entry_vids.js", "src/s_uaqif5ac0dy.js"], "symbols": ["s_uaqIf5ac0DY"] }, "q-8fe71345.js": { "size": 104, "imports": ["q-a4dd51f5.js"], "origins": ["src/entry_Header.js", "src/s_gm3f0h6v3fa.js"], "symbols": ["s_gm3f0H6v3fA"] }, "q-a146121d.js": { "size": 1489, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "dynamicImports": ["q-61deeacf.js"], "origins": ["@builder.io/qwik/build", "src/entry_QwikCity.js", "src/s_aaalzkh0klq.js", "src/s_z1nvhyeppoi.js"], "symbols": ["s_AaAlzKH0KlQ", "s_z1nvHyEppoI"] }, "q-a4dd51f5.js": { "size": 33755, "dynamicImports": ["q-2b4e9944.js"], "origins": ["\0vite/preload-helper", "node_modules/@builder.io/qwik/core.min.mjs", "src/root.js"] }, "q-ac67ece6.js": { "size": 128, "imports": ["q-a4dd51f5.js"], "origins": ["src/entry_settings.js", "src/s_td1bxnbdyba.js"], "symbols": ["s_tD1BXnbDybA"] }, "q-c5e4ad44.js": { "size": 1587, "imports": ["q-2b4e9944.js", "q-a4dd51f5.js"], "origins": ["src/entry__postid_.js", "src/s_xo5tmagpzos.js"], "symbols": ["s_Xo5tmaGPZOs"] }, "q-d640bea0.js": { "size": 189, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-ac67ece6.js"], "origins": ["src/routes/settings/index.js"] }, "q-dc060538.js": { "size": 158, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-e7858416.js"], "origins": ["src/routes/layout.js"] }, "q-e5ea369c.js": { "size": 128, "imports": ["q-a4dd51f5.js"], "origins": ["src/entry_clips.js", "src/s_j5h3enar0he.js"], "symbols": ["s_j5h3enAr0HE"] }, "q-e7858416.js": { "size": 282, "imports": ["q-3906475e.js", "q-a4dd51f5.js"], "origins": ["src/entry_layout.js", "src/s_ym0l9ncdguk.js"], "symbols": ["s_yM0L9NCDGUk"] }, "q-fbcc2226.js": { "size": 714, "imports": ["q-a4dd51f5.js"], "dynamicImports": ["q-65f6ec94.js"], "origins": ["src/routes/profile/[proid]/layout-profile.js"] }, "q-fda31d44.js": { "size": 3494, "imports": ["q-a4dd51f5.js"], "origins": ["src/entry_Sidebar.js", "src/s_btngjf3pdhw.js"], "symbols": ["s_BtnGjf3PdHw"] } }, "injections": [{ "tag": "link", "location": "head", "attributes": { "rel": "stylesheet", "href": "/build/q-6d120a0c.css" } }], "version": "1", "options": { "target": "client", "buildMode": "production", "forceFullBuild": true, "entryStrategy": { "type": "smart" } }, "platform": { "qwik": "0.9.0", "vite": "", "rollup": "2.78.1", "env": "node", "os": "linux", "node": "18.8.0" } };
 const isServer = true;
 const isBrowser = false;
-const Header = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "w-screen"
-  });
-}, "s_gm3f0H6v3fA"));
-const Menu = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  const loc = useLocation();
-  return /* @__PURE__ */ jsx("div", {
-    class: "menucont",
-    children: /* @__PURE__ */ jsx("div", {
-      class: "menumain",
-      children: [
-        /* @__PURE__ */ jsx(Link, {
-          id: "central",
-          href: "/",
-          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname === "/" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
-          children: [
-            /* @__PURE__ */ jsx("span", {
-              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
-              "data-icon": "tabler:home"
-            }),
-            /* @__PURE__ */ jsx("span", {
-              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
-              children: "Home"
-            })
-          ]
-        }),
-        /* @__PURE__ */ jsx(Link, {
-          id: "central",
-          href: "/vids",
-          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname === "/vids" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
-          children: [
-            /* @__PURE__ */ jsx("span", {
-              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
-              "data-icon": "tabler:search"
-            }),
-            /* @__PURE__ */ jsx("span", {
-              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
-              children: "Search"
-            })
-          ]
-        }),
-        /* @__PURE__ */ jsx(Link, {
-          id: "central",
-          href: "/clips",
-          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname === "/clips" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
-          children: [
-            /* @__PURE__ */ jsx("span", {
-              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
-              "data-icon": "tabler:video"
-            }),
-            /* @__PURE__ */ jsx("span", {
-              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
-              children: "Clips"
-            })
-          ]
-        }),
-        /* @__PURE__ */ jsx(Link, {
-          id: "central",
-          href: "/favs",
-          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-2  py-3 lg:py-[8px] ${loc.pathname === "/favs" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
-          children: [
-            /* @__PURE__ */ jsx("span", {
-              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
-              "data-icon": "ant-design:heart"
-            }),
-            /* @__PURE__ */ jsx("span", {
-              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
-              children: "Favourites"
-            })
-          ]
-        })
-      ]
-    })
-  });
-}, "s_uwWhp2E5O4I"));
-const Sidebar = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "sidebarwrapper",
-    children: [
-      /* @__PURE__ */ jsx("div", {
-        class: " sidebarprofile",
-        children: /* @__PURE__ */ jsx("div", {
-          class: "py-[10px] pt-0 flex flex-col items-center content-center ",
-          children: [
-            /* @__PURE__ */ jsx("div", {
-              class: "flex flex-row w-full items-center content-center",
-              children: [
-                /* @__PURE__ */ jsx("span", {
-                  class: "profiletext",
-                  children: "Profile"
-                }),
-                /* @__PURE__ */ jsx("div", {
-                  class: "logtext",
-                  children: "Logout"
-                })
-              ]
-            }),
-            /* @__PURE__ */ jsx("div", {
-              class: "flex flex-col mt-6",
-              children: [
-                /* @__PURE__ */ jsx("img", {
-                  class: "w-20 h-20 rounded-full mx-auto",
-                  src: "https://picsum.photos/200/300"
-                }),
-                /* @__PURE__ */ jsx("div", {
-                  class: "font-inter font-semibold pt-5 text-md mx-auto text-neutral-300 my-auto",
-                  children: "Admin Acct"
-                }),
-                /* @__PURE__ */ jsx("div", {
-                  class: "font-inter font-medium pt-[1px] text-[12.75px] mx-auto text-neutral-500 my-auto",
-                  children: "@admin"
-                }),
-                /* @__PURE__ */ jsx("div", {
-                  class: "font-inter font-medium pt-[18.5px] text-sm mx-auto text-neutral-400 my-auto",
-                  children: "I am the admin of this app"
-                })
-              ]
-            })
-          ]
-        })
-      }),
-      /* @__PURE__ */ jsx("div", {
-        class: "sidebardivs",
-        children: [
-          /* @__PURE__ */ jsx("span", {
-            class: "quicktext",
-            children: "Quick Actions"
-          }),
-          /* @__PURE__ */ jsx("div", {
-            class: "quickcont",
-            children: /* @__PURE__ */ jsx("div", {
-              class: "flex flex-row space-x-4 mx-auto items-center content-center",
-              children: [
-                /* @__PURE__ */ jsx("button", {
-                  class: "py-2 px-5 bg-white bg-opacity-[2%] rounded-md",
-                  children: /* @__PURE__ */ jsx("span", {
-                    class: "iconify text-neutral-300 w-4 h-4",
-                    "data-icon": "ep:message"
-                  })
-                }),
-                /* @__PURE__ */ jsx("button", {
-                  class: "py-2 px-5 hidden lg:block bg-white bg-opacity-[2%] rounded-md",
-                  children: /* @__PURE__ */ jsx("span", {
-                    class: "iconify text-neutral-300 w-4 h-4",
-                    "data-icon": "ep:edit"
-                  })
-                }),
-                /* @__PURE__ */ jsx("button", {
-                  class: "py-2 px-5 bg-white bg-opacity-[2%] rounded-md",
-                  children: /* @__PURE__ */ jsx("span", {
-                    class: "iconify text-neutral-300 w-4 h-4",
-                    "data-icon": "ep:setting"
-                  })
-                }),
-                /* @__PURE__ */ jsx("button", {
-                  class: "py-2 px-5 bg-white bg-opacity-[2%] rounded-md",
-                  children: /* @__PURE__ */ jsx("span", {
-                    class: "iconify text-neutral-300 w-4 h-4",
-                    "data-icon": "ep:user"
-                  })
-                })
-              ]
-            })
-          })
-        ]
-      }),
-      /* @__PURE__ */ jsx("div", {
-        class: "sidebarmessage",
-        children: [
-          /* @__PURE__ */ jsx("div", {
-            class: "msgcont",
-            children: [
-              /* @__PURE__ */ jsx("span", {
-                class: "pl-[6px] mt-1 text-[15px] font-medium text-neutral-300 font-sf",
-                children: "Messages"
-              }),
-              /* @__PURE__ */ jsx("span", {
-                class: "iconify w-5 h-5 ml-auto mr-1 text-neutral-400 my-auto",
-                "data-icon": "ep:edit"
-              })
-            ]
-          }),
-          /* @__PURE__ */ jsx("div", {
-            class: "flex flex-col my-1 py-1 space-y-[22px] px-1",
-            children: [
-              /* @__PURE__ */ jsx("div", {
-                class: "flex flex-row space-x-[10px]",
-                children: [
-                  /* @__PURE__ */ jsx("img", {
-                    class: "w-10 border border-[rgba(0,0,0,0)] flex-shrink-0 h-10 mx-2 mr-1 rounded-md",
-                    src: "https://picsum.photos/100/100"
-                  }),
-                  /* @__PURE__ */ jsx("div", {
-                    class: "flex flex-col my-auto space-y-[0px] relative w-full",
-                    children: [
-                      /* @__PURE__ */ jsx("span", {
-                        class: "text-[13px] font-bold font-sf text-neutral-400",
-                        children: " Bon Jovi "
-                      }),
-                      /* @__PURE__ */ jsx("span", {
-                        class: "text-[11px] font-sf text-neutral-500 pl-[1px]",
-                        children: " Active Yesterday "
-                      })
-                    ]
-                  })
-                ]
-              }),
-              /* @__PURE__ */ jsx("div", {
-                class: "flex flex-row space-x-[10px]",
-                children: [
-                  /* @__PURE__ */ jsx("img", {
-                    class: "w-10 border border-[rgba(0,0,0,0)] flex-shrink-0 h-10 mx-2 mr-1 rounded-md",
-                    src: "https://picsum.photos/100/300"
-                  }),
-                  /* @__PURE__ */ jsx("div", {
-                    class: "flex flex-col my-auto space-y-[0px] relative w-full",
-                    children: [
-                      /* @__PURE__ */ jsx("span", {
-                        class: "text-[13px] font-bold font-sf text-neutral-400",
-                        children: " Test User "
-                      }),
-                      /* @__PURE__ */ jsx("span", {
-                        class: "text-[11px] font-sf text-neutral-500 pl-[1px]",
-                        children: " Online "
-                      })
-                    ]
-                  })
-                ]
-              }),
-              /* @__PURE__ */ jsx("div", {
-                class: "flex flex-row space-x-[10px]",
-                children: [
-                  /* @__PURE__ */ jsx("img", {
-                    class: "w-10 flex-shrink-0 border border-[rgba(0,0,0,0)] h-10 mx-2 mr-1 rounded-md",
-                    src: "https://picsum.photos/100/200"
-                  }),
-                  /* @__PURE__ */ jsx("div", {
-                    class: "flex flex-col my-auto space-y-[0px] relative w-full",
-                    children: [
-                      /* @__PURE__ */ jsx("span", {
-                        class: "text-[13px] font-bold font-sf text-neutral-400",
-                        children: " Trial User "
-                      }),
-                      /* @__PURE__ */ jsx("span", {
-                        class: "text-[11px] font-sf text-neutral-500 pl-[1px]",
-                        children: " Active 3m Ago "
-                      })
-                    ]
-                  })
-                ]
-              })
-            ]
-          })
-        ]
-      })
-    ]
-  });
-}, "s_BtnGjf3PdHw"));
-const layout = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "bgcol",
-    children: [
-      /* @__PURE__ */ jsx(Header, {}),
-      /* @__PURE__ */ jsx("main", {
-        class: "flex flex-row-reverse md:flex-row w-screen overflow-hidden ",
-        children: [
-          /* @__PURE__ */ jsx(Menu, {}),
-          /* @__PURE__ */ jsx(Slot, {}),
-          /* @__PURE__ */ jsx(Sidebar, {})
-        ]
-      })
-    ]
-  });
-}, "s_yM0L9NCDGUk"));
-const Layout_ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: layout
-}, Symbol.toStringTag, { value: "Module" }));
-const layoutIndex = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "bgcol",
-    children: [
-      /* @__PURE__ */ jsx(Header, {}),
-      /* @__PURE__ */ jsx("main", {
-        class: "flex flex-row-reverse md:flex-row w-screen flex-grow overflow-hidden ",
-        children: [
-          /* @__PURE__ */ jsx(Menu, {}),
-          /* @__PURE__ */ jsx(Slot, {}),
-          /* @__PURE__ */ jsx(Sidebar, {})
-        ]
-      })
-    ]
-  });
-}, "s_NcbFhH0Rq0M"));
-const Layoutindex_ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: layoutIndex
-}, Symbol.toStringTag, { value: "Module" }));
-const data$1 = {
-  taylor: {
-    name: "A Taylor Swift",
-    username: "@Taylor_Swift",
-    about: "I make music that i write",
-    cover: "https://iheart-blog.s3.amazonaws.com/banner/originals/0_a_aaaTSwiftBanner.jpg",
-    profile: "https://gracemcgettigan.files.wordpress.com/2015/01/tay.jpg",
-    followers: "129M"
-  },
-  sean: {
-    name: "A Sean Paul",
-    username: "@Sean_Paul",
-    about: "Sean Paul is a Jamaicam singer/songwriter known for his pop classics",
-    cover: "https://i.pinimg.com/originals/30/58/6a/30586a6e4209906100fa2f470cd0a819.jpg",
-    profile: "https://wallpapercave.com/wp/wp5979216.jpg",
-    followers: "69M"
-  }
-};
-const layoutProfile = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  const location = useLocation();
-  location.params.proid;
-  location.params.proid;
-  return /* @__PURE__ */ jsx("div", {
-    class: " flex flex-grow flex-col bg-white bg-opacity-10 md:bg-opacity-0 py-0 md:space-y-4",
-    children: /* @__PURE__ */ jsx("div", {
-      class: "xl:relative md:m-5 m-3",
-      children: [
-        /* @__PURE__ */ jsx("div", {
-          class: `h-44 lg:h-[203px] rounded-lg bg-cover `,
-          style: `background-image:
-linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 10%, rgba(0, 0, 0, .6) 40%, rgba(0, 0, 0, .8) 65%, rgba(0, 0, 0, 1) 100%),
-url('');
-
-background-size: cover;
-
-`
-        }),
-        /* @__PURE__ */ jsx("div", {
-          class: "xl:absolute w-full xl:left-10 xl:top-[120px] xl:right-0 mx-auto mt-7 xl:mt-0 flex flex-col",
-          children: [
-            /* @__PURE__ */ jsx("img", {
-              class: "xl:w-[100px] xl:h-[100px] shadow-xl border border-neutral-800 w-20 mx-auto xl:mx-0 h-20 rounded-full"
-            }),
-            /* @__PURE__ */ jsx("div", {
-              class: "flex-grow flex flex-col xl:block",
-              children: [
-                /* @__PURE__ */ jsx("div", {
-                  class: "flex flex-row xl:top-[20px] xl:left-[125px] mx-auto xl:mx-0 xl:absolute none mt-3 xl:mt-0",
-                  children: /* @__PURE__ */ jsx("div", {
-                    class: " flex flex-col mx-auto xl:mx-0",
-                    children: [
-                      /* @__PURE__ */ jsx("span", {
-                        class: "xl:text-lg mx-auto xl:mx-0 text-lg font-semibold font-sf text-neutral-300"
-                      }),
-                      /* @__PURE__ */ jsx("span", {
-                        class: "xl:text-[12.5px] mt-1 xl:mt-[0px] text-center xl:text-left leading-relaxed xl:px-0 xl:w-full sm:w-3/4 leading-5 xl:mx-0 mx-auto px-8 text-[12px] font-sf text-neutral-400"
-                      })
-                    ]
-                  })
-                }),
-                /* @__PURE__ */ jsx("button", {
-                  class: "xl:absolute xl:right-[90px] shadow-lg xl:top-[25px] px-8 mx-auto xl:mx-0 h-max text-xs xl:text-sm text-white font-semibold bg-blue-600 overflow-y-hidden py-2 xl:my-0 my-5 xl:rounded-md",
-                  children: "Follow"
-                })
-              ]
-            })
-          ]
-        })
-      ]
-    })
-  });
-}, "s_aeoMBoP047Y"));
-const ProfileProidLayoutprofile_ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  data: data$1,
-  default: layoutProfile
-}, Symbol.toStringTag, { value: "Module" }));
-var Post = /* @__PURE__ */ componentQrl(inlinedQrl((props) => {
-  return /* @__PURE__ */ jsx(Fragment, {
-    children: /* @__PURE__ */ jsx("div", {
-      class: "flex flex-row border-b border-b-[#121212] ",
-      children: [
-        /* @__PURE__ */ jsx("img", {
-          class: `hidden w-full lg:max-w-[430px] max-h-auto max-w-[350px] absolute  h-full`,
-          src: props.image
-        }),
-        /* @__PURE__ */ jsx("div", {
-          class: "w-max h-full py-4 px-[16px] bg-[#121212] flex flex-col space-y-[18px]",
-          children: [
-            /* @__PURE__ */ jsx("span", {
-              class: "text-neutral-500 iconify w-4 h-4",
-              "data-icon": "ant-design:heart"
-            }),
-            /* @__PURE__ */ jsx("span", {
-              class: "text-neutral-500 iconify w-4 h-4",
-              "data-icon": "ant-design:message"
-            })
-          ]
-        }),
-        /* @__PURE__ */ jsx("div", {
-          class: "flex flex-col px-4 py-4",
-          children: [
-            /* @__PURE__ */ jsx("div", {
-              class: "flex flex-row bg-white bg-opacity-[3%] w-max px-[10px] py-[6px] rounded-sm items-center content-center mb-[8px] md:mb-[10px] space-x-[8px]",
-              children: [
-                /* @__PURE__ */ jsx("img", {
-                  class: "w-[14px] h-[14px] rounded-full ",
-                  src: props.poster,
-                  children: " "
-                }),
-                /* @__PURE__ */ jsx("h1", {
-                  class: "text-[9.5px] md:text-[10.5px] font-sans mt-[1.5px] md:mt-[1px] text-neutral-400 font-medium ",
-                  children: props.user
-                })
-              ]
-            }),
-            /* @__PURE__ */ jsx("div", {
-              class: "",
-              children: [
-                /* @__PURE__ */ jsx("h1", {
-                  onClick$: inlinedQrl(() => {
-                    const [props2] = useLexicalScope();
-                    return window.location.href = `/posts/${props2.id}`;
-                  }, "s_PeDTn2z80A4", [
-                    props
-                  ]),
-                  class: ` md:leading-normal leading-5 text-[14.5px] cursor-pointer md:text-[15.9px] lg:text-[16.5px] font-inter  ${`md:mt-[0px] mt-[1px] mb-[4px]`} font-medium text-neutral-300 md:opacity-90 `,
-                  children: props.title
-                }),
-                /* @__PURE__ */ jsx("h1", {
-                  class: "text-[12px] md:text-[13.5px] font-inter text-[#7b7b7b] ",
-                  children: props.content
-                }),
-                /* @__PURE__ */ jsx("div", {
-                  class: `  py-3 pb-[2px] pt-[16px] ${!props.image ? `hidden` : `flex`}  `,
-                  children: [
-                    "    ",
-                    /* @__PURE__ */ jsx("img", {
-                      class: "w-full lg:max-w-[430px] max-h-full max-w-[350px] mx-auto md:mx-0 h-full",
-                      src: props.image
-                    })
-                  ]
-                })
-              ]
-            })
-          ]
-        }),
-        /* @__PURE__ */ jsx("div", {
-          class: ""
-        })
-      ]
-    })
-  });
-}, "s_bSNo02BOSeo"));
-const index_index = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  var publishpopup = useStore({
-    state: false
-  });
-  return /* @__PURE__ */ jsx(Fragment, {
-    children: /* @__PURE__ */ jsx("div", {
-      class: "flex flex-col flex-grow md:relative ",
-      children: [
-        /* @__PURE__ */ jsx("button", {
-          onClick$: inlinedQrl(() => {
-            const [publishpopup2] = useLexicalScope();
-            return publishpopup2.state = !publishpopup2.state;
-          }, "s_t8Q6Qpbu0pE", [
-            publishpopup
-          ]),
-          class: "absolute flex flex-row space-x-[10px] items-center content-center right-10 bottom-10 md:right-15 md:bottom-15 lg:bottom:20 text-white font-semibold font-inter md:text-md text-sm md:py-4 md:px-7 bg-blue-900 rounded-full",
-          children: [
-            /* @__PURE__ */ jsx("span", {
-              class: "md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4",
-              "data-icon": "ep:plus"
-            }),
-            /* @__PURE__ */ jsx("span", {
-              class: "hidden md:inline-flex",
-              children: "New Post"
-            })
-          ]
-        }),
-        /* @__PURE__ */ jsx("div", {
-          id: "publish",
-          onClick$: inlinedQrl((event) => {
-            const [publishpopup2] = useLexicalScope();
-            return event.currentTarget == event.target ? (event.stopPropagation(), !publishpopup2.state ? publishpopup2.state = !publishpopup2.state : 0) : 0;
-          }, "s_TlrTEIpSGyw", [
-            publishpopup
-          ]),
-          class: `${!publishpopup.state ? "hidden" : "flex"}  fadeMe  items-center content-center flex flex-row`,
-          children: /* @__PURE__ */ jsx("div", {
-            id: "popup",
-            class: "z-1000 bg-[#0d0d0d] rounded-lg mx-auto",
-            children: [
-              /* @__PURE__ */ jsx("div", {
-                class: "py-3 px-3 flex flex-row",
-                children: [
-                  /* @__PURE__ */ jsx("button", {
-                    onClick$: inlinedQrl(() => {
-                      const [publishpopup2] = useLexicalScope();
-                      return publishpopup2.state = !publishpopup2.state;
-                    }, "s_p8802htc8lU", [
-                      publishpopup
-                    ]),
-                    children: /* @__PURE__ */ jsx("span", {
-                      class: "iconify my-1 mx-2 w-[18px] h-[18px] font-sf text-neutral-400 ",
-                      "data-icon": "clarity:window-close-line"
-                    })
-                  }),
-                  /* @__PURE__ */ jsx("button", {
-                    class: "px-6 ml-auto py-[8px] right-0 ml-auto text-white font-inter font-medium text-[12px] rounded-md bg-blue-800",
-                    children: "Publish"
-                  })
-                ]
-              }),
-              /* @__PURE__ */ jsx("textarea", {
-                id: "publishtextarea",
-                class: " outline-none bg-transparent w-72 md:w-96 h-32 mx-5 rounded-md font-sf placeholder:text-neutral-400 text-white md:text-md text-sm placeholder:text-md md:text-md placeholder:text-sm mt-0 px-0 mb-3 border-none",
-                placeholder: "What's Poppin? @User"
-              }),
-              /* @__PURE__ */ jsx("div", {
-                class: "py-[14px] border-t border-t-neutral-900 px-6 flex flex-row items-center content-center space-x-5",
-                children: [
-                  /* @__PURE__ */ jsx("span", {
-                    class: "iconify ml-auto w-[18px] h-[18px] font-sf text-neutral-400 ",
-                    "data-icon": "ci:image"
-                  }),
-                  /* @__PURE__ */ jsx("span", {
-                    class: "iconify w-[18px] h-[18px] font-sf text-neutral-400 ",
-                    "data-icon": "ci:youtube"
-                  }),
-                  /* @__PURE__ */ jsx("span", {
-                    class: "iconify w-[18px] h-[18px] font-sf text-neutral-400 ",
-                    "data-icon": "fluent:gif-16-filled"
-                  })
-                ]
-              })
-            ]
-          })
-        }),
-        /* @__PURE__ */ jsx("div", {
-          id: "midcont",
-          class: "flex flex-grow flex-col bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md ",
-          children: [
-            /* @__PURE__ */ jsx(Post, {
-              id: "breme",
-              title: "breme",
-              about: "This is the very first post ever on this app!",
-              user: "TeamEvolt",
-              username: "@TeamEvolt",
-              poster: "https://picsum.photos/300/400",
-              content: "This is the first post on #evolt https://evoltchat.com",
-              likes: "1",
-              comments: "0",
-              published: "Yesterday"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "rant",
-              title: "I love how professors still rant about For Loop being unrealistic",
-              about: "2019",
-              user: "Admin - Evolt",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake",
-              likes: "3",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "first",
-              title: "First Image Post",
-              about: "2019",
-              user: "Admin - Evolt",
-              image: "https://picsum.photos/500/600",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "Image Posting test",
-              likes: "0",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "breme",
-              title: "breme",
-              about: "This is the very first post ever on this app!",
-              user: "TeamEvolt",
-              username: "@TeamEvolt",
-              poster: "https://picsum.photos/300/400",
-              content: "This is the first post on #evolt https://evoltchat.com",
-              likes: "1",
-              comments: "0",
-              published: "Yesterday"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "rant",
-              title: "I love how professors still rant about For Loop being unrealistic",
-              about: "2019",
-              user: "Admin - Evolt",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake",
-              likes: "3",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "first",
-              title: "First Image Post",
-              about: "2019",
-              user: "Admin - Evolt",
-              image: "https://picsum.photos/500/600",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "Image Posting test",
-              likes: "0",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "breme",
-              title: "breme",
-              about: "This is the very first post ever on this app!",
-              user: "TeamEvolt",
-              username: "@TeamEvolt",
-              poster: "https://picsum.photos/300/400",
-              content: "This is the first post on #evolt https://evoltchat.com",
-              likes: "1",
-              comments: "0",
-              published: "Yesterday"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "rant",
-              title: "I love how professors still rant about For Loop being unrealistic",
-              about: "2019",
-              user: "Admin - Evolt",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake",
-              likes: "3",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "first",
-              title: "First Image Post",
-              about: "2019",
-              user: "Admin - Evolt",
-              image: "https://picsum.photos/500/600",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "Image Posting test",
-              likes: "0",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "breme",
-              title: "breme",
-              about: "This is the very first post ever on this app!",
-              user: "TeamEvolt",
-              username: "@TeamEvolt",
-              poster: "https://picsum.photos/300/400",
-              content: "This is the first post on #evolt https://evoltchat.com",
-              likes: "1",
-              comments: "0",
-              published: "Yesterday"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "rant",
-              title: "I love how professors still rant about For Loop being unrealistic",
-              about: "2019",
-              user: "Admin - Evolt",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake",
-              likes: "3",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "first",
-              title: "First Image Post",
-              about: "2019",
-              user: "Admin - Evolt",
-              image: "https://picsum.photos/500/600",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "Image Posting test",
-              likes: "0",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "breme",
-              title: "breme",
-              about: "This is the very first post ever on this app!",
-              user: "TeamEvolt",
-              username: "@TeamEvolt",
-              poster: "https://picsum.photos/300/400",
-              content: "This is the first post on #evolt https://evoltchat.com",
-              likes: "1",
-              comments: "0",
-              published: "Yesterday"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "rant",
-              title: "I love how professors still rant about For Loop being unrealistic",
-              about: "2019",
-              user: "Admin - Evolt",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake",
-              likes: "3",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "first",
-              title: "First Image Post",
-              about: "2019",
-              user: "Admin - Evolt",
-              image: "https://picsum.photos/500/600",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "Image Posting test",
-              likes: "0",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "breme",
-              title: "breme",
-              about: "This is the very first post ever on this app!",
-              user: "TeamEvolt",
-              username: "@TeamEvolt",
-              poster: "https://picsum.photos/300/400",
-              content: "This is the first post on #evolt https://evoltchat.com",
-              likes: "1",
-              comments: "0",
-              published: "Yesterday"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "rant",
-              title: "I love how professors still rant about For Loop being unrealistic",
-              about: "2019",
-              user: "Admin - Evolt",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake",
-              likes: "3",
-              comments: "0",
-              published: "2 Days Ago"
-            }),
-            /* @__PURE__ */ jsx(Post, {
-              id: "first",
-              title: "First Image Post",
-              about: "2019",
-              user: "Admin - Evolt",
-              image: "https://picsum.photos/500/600",
-              username: "@AdminEvolt",
-              poster: "https://picsum.photos/200/300",
-              content: "Image Posting test",
-              likes: "0",
-              comments: "0",
-              published: "2 Days Ago"
-            })
-          ]
-        })
-      ]
-    })
-  });
-}, "s_0e3es3vnWuk"));
-const head$4 = {
-  title: "Home"
-};
-const Indexindex = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: index_index,
-  head: head$4
-}, Symbol.toStringTag, { value: "Module" }));
-const index$4 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "h-screen flex flex-col flex-grow"
-  });
-}, "s_j5h3enAr0HE"));
-const head$3 = {
-  title: "Clips"
-};
-const Clips = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: index$4,
-  head: head$3
-}, Symbol.toStringTag, { value: "Module" }));
-const index$3 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "h-screen flex flex-col flex-grow"
-  });
-}, "s_n0b0sGHmkUY"));
-const head$2 = {
-  title: "Favs"
-};
-const Favs = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: index$3,
-  head: head$2
-}, Symbol.toStringTag, { value: "Module" }));
-const index$2 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "h-screen flex flex-col flex-grow"
-  });
-}, "s_tD1BXnbDybA"));
-const head$1 = {
-  title: "Settings"
-};
-const Settings = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: index$2,
-  head: head$1
-}, Symbol.toStringTag, { value: "Module" }));
-const index$1 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  return /* @__PURE__ */ jsx("div", {
-    class: "h-screen flex flex-col flex-grow"
-  });
-}, "s_uaqIf5ac0DY"));
-const head = {
-  title: "Vids"
-};
-const Vids = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: index$1,
-  head
-}, Symbol.toStringTag, { value: "Module" }));
-const index = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  const location = useLocation();
-  location.params.proid;
-  location.params.proid;
-  location.params.proid;
-  return /* @__PURE__ */ jsx("div", {
-    id: "midcont",
-    class: "h-screen flex flex-col flex-grow md:py-10 p-6 px-8",
-    children: [
-      /* @__PURE__ */ jsx("div", {
-        class: "flex flex-row items-center content-center ",
-        children: [
-          /* @__PURE__ */ jsx("div", {
-            class: "flex flex-row items-center content-center space-x-[12px] mr-auto",
-            children: [
-              /* @__PURE__ */ jsx("img", {
-                class: "w-5 h-5 rounded-full",
-                src: "https://picsum.photos/500/600",
-                children: " "
-              }),
-              /* @__PURE__ */ jsx("h1", {
-                class: "text-[12px] md:text-[12px] font-inter text-neutral-300 opacity-90 ",
-                children: [
-                  /* @__PURE__ */ jsx("span", {
-                    class: "hidden md:inline-flex",
-                    children: "Posted by"
-                  }),
-                  " TeamEvolt"
-                ]
-              })
-            ]
-          }),
-          /* @__PURE__ */ jsx("h1", {
-            class: "text-[12px] md:text-[12px] font-inter text-neutral-400 ",
-            children: "September 19 2022"
-          })
-        ]
-      }),
-      /* @__PURE__ */ jsx("h1", {
-        class: "text-[20px] md:text-[20.75px] lg:text-[20.75px] my-4 mb-0 font-inter font-semibold text-neutral-300 ",
-        children: "Did you expect to see a dynamically rendered post here?"
-      }),
-      /* @__PURE__ */ jsx("h1", {
-        class: "text-[14px] md:text-[14.5px] lg:text-[14.5px] sm:mt-[10px] lg:mt-3 lg:mb-5 my-[17px] mb-[13px] lg:mb-[10px] md:mb-3 font-inter leading-relaxed text-neutral-400 ",
-        children: "Well I did too, and do you know why it isn't the case? Well the guy that had to do backend is high right now. He hasn't been replying to my messages whenever i question him of when he thinks of doing. You understand my situation don't you? I dont care if you don't too"
-      }),
-      /* @__PURE__ */ jsx("div", {
-        class: `  py-3 pt-[12px] ${`flex`}  `,
-        children: [
-          "    ",
-          /* @__PURE__ */ jsx("img", {
-            class: "w-auto rounded-[5px] mx-auto md:mx-0 h-auto",
-            src: "https://picsum.photos/500/600"
-          })
-        ]
-      })
-    ]
-  });
-}, "s_Xo5tmaGPZOs"));
-const PostsPostid = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: index
-}, Symbol.toStringTag, { value: "Module" }));
-const data = {
-  taylor: {
-    name: "Taylor Swift",
-    username: "@Taylor_Swift",
-    about: "I make music that i write",
-    cover: "https://iheart-blog.s3.amazonaws.com/banner/originals/0_a_aaaTSwiftBanner.jpg",
-    profile: "https://gracemcgettigan.files.wordpress.com/2015/01/tay.jpg",
-    followers: "129M"
-  },
-  sean: {
-    name: "A Sean Paul",
-    username: "@Sean_Paul",
-    about: "Sean Paul is a Jamaicam singer/songwriter known for his pop classics",
-    cover: "https://i.pinimg.com/originals/30/58/6a/30586a6e4209906100fa2f470cd0a819.jpg",
-    profile: "https://wallpapercave.com/wp/wp5979216.jpg",
-    followers: "69M"
-  }
-};
-const index_profile = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
-  const location = useLocation();
-  location.params.proid;
-  location.params.proid;
-  return /* @__PURE__ */ jsx(Fragment, {});
-}, "s_26hfKJ9I4hk"));
-const ProfileProidIndexprofile = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  data,
-  default: index_profile
-}, Symbol.toStringTag, { value: "Module" }));
-const Layout = () => Layout_;
-const Layoutindex = () => Layoutindex_;
-const ProfileProidLayoutprofile = () => ProfileProidLayoutprofile_;
-const routes = [
-  [/^\/$/, [Layoutindex, () => Indexindex], void 0, "/", ["q-1a063a29.js", "q-25e8cbed.js"]],
-  [/^\/clips\/?$/, [Layout, () => Clips], void 0, "/clips", ["q-237c0038.js", "q-f089809a.js"]],
-  [/^\/favs\/?$/, [Layout, () => Favs], void 0, "/favs", ["q-237c0038.js", "q-5dd1a945.js"]],
-  [/^\/settings\/?$/, [Layout, () => Settings], void 0, "/settings", ["q-237c0038.js", "q-e582bef0.js"]],
-  [/^\/vids\/?$/, [Layout, () => Vids], void 0, "/vids", ["q-237c0038.js", "q-1288b5e3.js"]],
-  [/^\/posts\/([^/]+?)\/?$/, [Layout, () => PostsPostid], ["postid"], "/posts/[postid]", ["q-237c0038.js", "q-b4c84de9.js"]],
-  [/^\/profile\/([^/]+?)\/?$/, [Layout, ProfileProidLayoutprofile, () => ProfileProidIndexprofile], ["proid"], "/profile/[proid]", ["q-237c0038.js", "q-15642003.js", "q-1439a3ac.js"]]
-];
-const menus = [];
-const trailingSlash = false;
-const basePathname = "/";
-const cacheModules = true;
-const _qwikCityPlan = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  routes,
-  menus,
-  trailingSlash,
-  basePathname,
-  cacheModules
-}, Symbol.toStringTag, { value: "Module" }));
-const ContentContext = /* @__PURE__ */ createContext("qc-c");
-const ContentInternalContext = /* @__PURE__ */ createContext("qc-ic");
-const DocumentHeadContext = /* @__PURE__ */ createContext("qc-h");
-const RouteLocationContext = /* @__PURE__ */ createContext("qc-l");
-const RouteNavigateContext = /* @__PURE__ */ createContext("qc-n");
+const ContentContext = /* @__PURE__ */ createContext$1("qc-c");
+const ContentInternalContext = /* @__PURE__ */ createContext$1("qc-ic");
+const DocumentHeadContext = /* @__PURE__ */ createContext$1("qc-h");
+const RouteLocationContext = /* @__PURE__ */ createContext$1("qc-l");
+const RouteNavigateContext = /* @__PURE__ */ createContext$1("qc-n");
 const RouterOutlet = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
   const { contents } = useContext(ContentInternalContext);
   if (contents && contents.length > 0) {
@@ -6620,10 +3903,11 @@ const dispatchPrefetchEvent = (prefetchData) => dispatchEvent(new CustomEvent("q
 }));
 const CLIENT_HISTORY_INITIALIZED = /* @__PURE__ */ Symbol();
 const loadClientData = async (href) => {
+  const { cacheModules: cacheModules2 } = await Promise.resolve().then(() => _qwikCityPlan);
   const pagePathname = new URL(href).pathname;
   const endpointUrl = getClientEndpointPath(pagePathname);
   const now = Date.now();
-  const expiration = 6e5;
+  const expiration = cacheModules2 ? 6e5 : 15e3;
   const cachedClientPageIndex = cachedClientPages.findIndex((c) => c.u === endpointUrl);
   let cachedClientPageData = cachedClientPages[cachedClientPageIndex];
   dispatchPrefetchEvent({
@@ -6755,26 +4039,21 @@ const Link = /* @__PURE__ */ componentQrl(inlinedQrl((props) => {
       linkProps,
       nav
     ]),
-    onMouseOver$: inlinedQrl(() => {
-      const [prefetchUrl2] = useLexicalScope();
-      return prefetchLinkResources(prefetchUrl2, false);
-    }, "Link_component_a_onMouseOver_skxgNVWVOT8", [
-      prefetchUrl
-    ]),
-    onQVisible$: inlinedQrl(() => {
-      const [prefetchUrl2] = useLexicalScope();
-      return prefetchLinkResources(prefetchUrl2, true);
-    }, "Link_component_a_onQVisible_uVE5iM9H73c", [
-      prefetchUrl
-    ]),
+    "data-prefetch": prefetchUrl,
+    onMouseOver$: inlinedQrl((_, elm) => prefetchLinkResources(elm), "Link_component_a_onMouseOver_skxgNVWVOT8"),
+    onQVisible$: inlinedQrl((_, elm) => prefetchLinkResources(elm, true), "Link_component_a_onQVisible_uVE5iM9H73c"),
     children: /* @__PURE__ */ jsx(Slot, {})
   });
 }, "Link_component_mYsiJcA4IBc"));
-const prefetchLinkResources = (prefetchUrl, isOnVisible) => {
-  if (!windowInnerWidth)
-    windowInnerWidth = window.innerWidth;
-  if (prefetchUrl && (!isOnVisible || isOnVisible && windowInnerWidth < 520))
-    loadClientData(prefetchUrl);
+const prefetchLinkResources = (elm, isOnVisible) => {
+  var _a;
+  const prefetchUrl = (_a = elm == null ? void 0 : elm.dataset) == null ? void 0 : _a.prefetch;
+  if (prefetchUrl) {
+    if (!windowInnerWidth)
+      windowInnerWidth = window.innerWidth;
+    if (!isOnVisible || isOnVisible && windowInnerWidth < 520)
+      loadClientData(prefetchUrl);
+  }
 };
 let windowInnerWidth = 0;
 const Head = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
@@ -6829,7 +4108,7 @@ const Head = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
     ]
   });
 }, "s_zgN7XgNXC7Q"));
-const styles = '/*\n! tailwindcss v3.0.24 | MIT License | https://tailwindcss.com\n*//*\n1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)\n2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)\n*/\n\n*,\n::before,\n::after {\n  box-sizing: border-box; /* 1 */\n  border-width: 0; /* 2 */\n  border-style: solid; /* 2 */\n  border-color: #e5e7eb; /* 2 */\n}\n\n::before,\n::after {\n  --tw-content: \'\';\n}\n\n/*\n1. Use a consistent sensible line-height in all browsers.\n2. Prevent adjustments of font size after orientation changes in iOS.\n3. Use a more readable tab size.\n4. Use the user\'s configured `sans` font-family by default.\n*/\n\nhtml {\n  line-height: 1.5; /* 1 */\n  -webkit-text-size-adjust: 100%; /* 2 */\n  -moz-tab-size: 4; /* 3 */\n  -o-tab-size: 4;\n     tab-size: 4; /* 3 */\n  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* 4 */\n}\n\n/*\n1. Remove the margin in all browsers.\n2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.\n*/\n\nbody {\n  margin: 0; /* 1 */\n  line-height: inherit; /* 2 */\n}\n\n/*\n1. Add the correct height in Firefox.\n2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)\n3. Ensure horizontal rules are visible by default.\n*/\n\nhr {\n  height: 0; /* 1 */\n  color: inherit; /* 2 */\n  border-top-width: 1px; /* 3 */\n}\n\n/*\nAdd the correct text decoration in Chrome, Edge, and Safari.\n*/\n\nabbr:where([title]) {\n  -webkit-text-decoration: underline dotted;\n          text-decoration: underline dotted;\n}\n\n/*\nRemove the default font size and weight for headings.\n*/\n\nh1,\nh2,\nh3,\nh4,\nh5,\nh6 {\n  font-size: inherit;\n  font-weight: inherit;\n}\n\n/*\nReset links to optimize for opt-in styling instead of opt-out.\n*/\n\na {\n  color: inherit;\n  text-decoration: inherit;\n}\n\n/*\nAdd the correct font weight in Edge and Safari.\n*/\n\nb,\nstrong {\n  font-weight: bolder;\n}\n\n/*\n1. Use the user\'s configured `mono` font family by default.\n2. Correct the odd `em` font sizing in all browsers.\n*/\n\ncode,\nkbd,\nsamp,\npre {\n  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* 1 */\n  font-size: 1em; /* 2 */\n}\n\n/*\nAdd the correct font size in all browsers.\n*/\n\nsmall {\n  font-size: 80%;\n}\n\n/*\nPrevent `sub` and `sup` elements from affecting the line height in all browsers.\n*/\n\nsub,\nsup {\n  font-size: 75%;\n  line-height: 0;\n  position: relative;\n  vertical-align: baseline;\n}\n\nsub {\n  bottom: -0.25em;\n}\n\nsup {\n  top: -0.5em;\n}\n\n/*\n1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)\n2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)\n3. Remove gaps between table borders by default.\n*/\n\ntable {\n  text-indent: 0; /* 1 */\n  border-color: inherit; /* 2 */\n  border-collapse: collapse; /* 3 */\n}\n\n/*\n1. Change the font styles in all browsers.\n2. Remove the margin in Firefox and Safari.\n3. Remove default padding in all browsers.\n*/\n\nbutton,\ninput,\noptgroup,\nselect,\ntextarea {\n  font-family: inherit; /* 1 */\n  font-size: 100%; /* 1 */\n  line-height: inherit; /* 1 */\n  color: inherit; /* 1 */\n  margin: 0; /* 2 */\n  padding: 0; /* 3 */\n}\n\n/*\nRemove the inheritance of text transform in Edge and Firefox.\n*/\n\nbutton,\nselect {\n  text-transform: none;\n}\n\n/*\n1. Correct the inability to style clickable types in iOS and Safari.\n2. Remove default button styles.\n*/\n\nbutton,\n[type=\'button\'],\n[type=\'reset\'],\n[type=\'submit\'] {\n  -webkit-appearance: button; /* 1 */\n  background-color: transparent; /* 2 */\n  background-image: none; /* 2 */\n}\n\n/*\nUse the modern Firefox focus style for all focusable elements.\n*/\n\n:-moz-focusring {\n  outline: auto;\n}\n\n/*\nRemove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)\n*/\n\n:-moz-ui-invalid {\n  box-shadow: none;\n}\n\n/*\nAdd the correct vertical alignment in Chrome and Firefox.\n*/\n\nprogress {\n  vertical-align: baseline;\n}\n\n/*\nCorrect the cursor style of increment and decrement buttons in Safari.\n*/\n\n::-webkit-inner-spin-button,\n::-webkit-outer-spin-button {\n  height: auto;\n}\n\n/*\n1. Correct the odd appearance in Chrome and Safari.\n2. Correct the outline style in Safari.\n*/\n\n[type=\'search\'] {\n  -webkit-appearance: textfield; /* 1 */\n  outline-offset: -2px; /* 2 */\n}\n\n/*\nRemove the inner padding in Chrome and Safari on macOS.\n*/\n\n::-webkit-search-decoration {\n  -webkit-appearance: none;\n}\n\n/*\n1. Correct the inability to style clickable types in iOS and Safari.\n2. Change font properties to `inherit` in Safari.\n*/\n\n::-webkit-file-upload-button {\n  -webkit-appearance: button; /* 1 */\n  font: inherit; /* 2 */\n}\n\n/*\nAdd the correct display in Chrome and Safari.\n*/\n\nsummary {\n  display: list-item;\n}\n\n/*\nRemoves the default spacing and border for appropriate elements.\n*/\n\nblockquote,\ndl,\ndd,\nh1,\nh2,\nh3,\nh4,\nh5,\nh6,\nhr,\nfigure,\np,\npre {\n  margin: 0;\n}\n\nfieldset {\n  margin: 0;\n  padding: 0;\n}\n\nlegend {\n  padding: 0;\n}\n\nol,\nul,\nmenu {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n}\n\n/*\nPrevent resizing textareas horizontally by default.\n*/\n\ntextarea {\n  resize: vertical;\n}\n\n/*\n1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)\n2. Set the default placeholder color to the user\'s configured gray 400 color.\n*/\n\ninput::-moz-placeholder, textarea::-moz-placeholder {\n  opacity: 1; /* 1 */\n  color: #9ca3af; /* 2 */\n}\n\ninput::placeholder,\ntextarea::placeholder {\n  opacity: 1; /* 1 */\n  color: #9ca3af; /* 2 */\n}\n\n/*\nSet the default cursor for buttons.\n*/\n\nbutton,\n[role="button"] {\n  cursor: pointer;\n}\n\n/*\nMake sure disabled buttons don\'t get the pointer cursor.\n*/\n:disabled {\n  cursor: default;\n}\n\n/*\n1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)\n2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)\n   This can trigger a poorly considered lint error in some tools but is included by design.\n*/\n\nimg,\nsvg,\nvideo,\ncanvas,\naudio,\niframe,\nembed,\nobject {\n  display: block; /* 1 */\n  vertical-align: middle; /* 2 */\n}\n\n/*\nConstrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)\n*/\n\nimg,\nvideo {\n  max-width: 100%;\n  height: auto;\n}\n\n/*\nEnsure the default browser behavior of the `hidden` attribute.\n*/\n\n[hidden] {\n  display: none;\n}\n\n*, ::before, ::after {\n  --tw-translate-x: 0;\n  --tw-translate-y: 0;\n  --tw-rotate: 0;\n  --tw-skew-x: 0;\n  --tw-skew-y: 0;\n  --tw-scale-x: 1;\n  --tw-scale-y: 1;\n  --tw-pan-x:  ;\n  --tw-pan-y:  ;\n  --tw-pinch-zoom:  ;\n  --tw-scroll-snap-strictness: proximity;\n  --tw-ordinal:  ;\n  --tw-slashed-zero:  ;\n  --tw-numeric-figure:  ;\n  --tw-numeric-spacing:  ;\n  --tw-numeric-fraction:  ;\n  --tw-ring-inset:  ;\n  --tw-ring-offset-width: 0px;\n  --tw-ring-offset-color: #fff;\n  --tw-ring-color: rgb(59 130 246 / 0.5);\n  --tw-ring-offset-shadow: 0 0 #0000;\n  --tw-ring-shadow: 0 0 #0000;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  --tw-blur:  ;\n  --tw-brightness:  ;\n  --tw-contrast:  ;\n  --tw-grayscale:  ;\n  --tw-hue-rotate:  ;\n  --tw-invert:  ;\n  --tw-saturate:  ;\n  --tw-sepia:  ;\n  --tw-drop-shadow:  ;\n  --tw-backdrop-blur:  ;\n  --tw-backdrop-brightness:  ;\n  --tw-backdrop-contrast:  ;\n  --tw-backdrop-grayscale:  ;\n  --tw-backdrop-hue-rotate:  ;\n  --tw-backdrop-invert:  ;\n  --tw-backdrop-opacity:  ;\n  --tw-backdrop-saturate:  ;\n  --tw-backdrop-sepia:  ;\n}\n.static {\n  position: static;\n}\n.absolute {\n  position: absolute;\n}\n.relative {\n  position: relative;\n}\n.sticky {\n  position: sticky;\n}\n.right-10 {\n  right: 2.5rem;\n}\n.bottom-10 {\n  bottom: 2.5rem;\n}\n.right-0 {\n  right: 0px;\n}\n.top-\\[9px\\] {\n  top: 9px;\n}\n.m-4 {\n  margin: 1rem;\n}\n.m-3 {\n  margin: 0.75rem;\n}\n.mx-auto {\n  margin-left: auto;\n  margin-right: auto;\n}\n.my-1 {\n  margin-top: 0.25rem;\n  margin-bottom: 0.25rem;\n}\n.mx-2 {\n  margin-left: 0.5rem;\n  margin-right: 0.5rem;\n}\n.mx-5 {\n  margin-left: 1.25rem;\n  margin-right: 1.25rem;\n}\n.mx-4 {\n  margin-left: 1rem;\n  margin-right: 1rem;\n}\n.mx-0 {\n  margin-left: 0px;\n  margin-right: 0px;\n}\n.my-auto {\n  margin-top: auto;\n  margin-bottom: auto;\n}\n.mx-1 {\n  margin-left: 0.25rem;\n  margin-right: 0.25rem;\n}\n.my-4 {\n  margin-top: 1rem;\n  margin-bottom: 1rem;\n}\n.my-\\[17px\\] {\n  margin-top: 17px;\n  margin-bottom: 17px;\n}\n.my-5 {\n  margin-top: 1.25rem;\n  margin-bottom: 1.25rem;\n}\n.ml-auto {\n  margin-left: auto;\n}\n.mt-0 {\n  margin-top: 0px;\n}\n.mb-3 {\n  margin-bottom: 0.75rem;\n}\n.mr-6 {\n  margin-right: 1.5rem;\n}\n.mr-1 {\n  margin-right: 0.25rem;\n}\n.mb-\\[8px\\] {\n  margin-bottom: 8px;\n}\n.mt-\\[1\\.5px\\] {\n  margin-top: 1.5px;\n}\n.mt-\\[1px\\] {\n  margin-top: 1px;\n}\n.mb-\\[4px\\] {\n  margin-bottom: 4px;\n}\n.mt-1 {\n  margin-top: 0.25rem;\n}\n.mt-6 {\n  margin-top: 1.5rem;\n}\n.mr-auto {\n  margin-right: auto;\n}\n.mb-0 {\n  margin-bottom: 0px;\n}\n.mb-\\[13px\\] {\n  margin-bottom: 13px;\n}\n.mt-7 {\n  margin-top: 1.75rem;\n}\n.mt-3 {\n  margin-top: 0.75rem;\n}\n.inline-block {\n  display: inline-block;\n}\n.flex {\n  display: flex;\n}\n.hidden {\n  display: none;\n}\n.h-5 {\n  height: 1.25rem;\n}\n.h-\\[18px\\] {\n  height: 18px;\n}\n.h-32 {\n  height: 8rem;\n}\n.h-8 {\n  height: 2rem;\n}\n.h-full {\n  height: 100%;\n}\n.h-4 {\n  height: 1rem;\n}\n.h-\\[14px\\] {\n  height: 14px;\n}\n.h-10 {\n  height: 2.5rem;\n}\n.h-auto {\n  height: auto;\n}\n.h-20 {\n  height: 5rem;\n}\n.h-max {\n  height: -webkit-max-content;\n  height: -moz-max-content;\n  height: max-content;\n}\n.h-screen {\n  height: 100vh;\n}\n.h-44 {\n  height: 11rem;\n}\n.max-h-full {\n  max-height: 100%;\n}\n.w-5 {\n  width: 1.25rem;\n}\n.w-\\[18px\\] {\n  width: 18px;\n}\n.w-72 {\n  width: 18rem;\n}\n.w-screen {\n  width: 100vw;\n}\n.w-44 {\n  width: 11rem;\n}\n.w-8 {\n  width: 2rem;\n}\n.w-full {\n  width: 100%;\n}\n.w-max {\n  width: -webkit-max-content;\n  width: -moz-max-content;\n  width: max-content;\n}\n.w-4 {\n  width: 1rem;\n}\n.w-\\[14px\\] {\n  width: 14px;\n}\n.w-10 {\n  width: 2.5rem;\n}\n.w-20 {\n  width: 5rem;\n}\n.w-auto {\n  width: auto;\n}\n.max-w-\\[350px\\] {\n  max-width: 350px;\n}\n.flex-shrink-0 {\n  flex-shrink: 0;\n}\n.flex-grow {\n  flex-grow: 1;\n}\n.grow {\n  flex-grow: 1;\n}\n.cursor-pointer {\n  cursor: pointer;\n}\n.flex-row {\n  flex-direction: row;\n}\n.flex-row-reverse {\n  flex-direction: row-reverse;\n}\n.flex-col {\n  flex-direction: column;\n}\n.content-center {\n  align-content: center;\n}\n.items-center {\n  align-items: center;\n}\n.space-x-\\[10px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(10px * var(--tw-space-x-reverse));\n  margin-left: calc(10px * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-5 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(1.25rem * var(--tw-space-x-reverse));\n  margin-left: calc(1.25rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-4 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(1rem * var(--tw-space-x-reverse));\n  margin-left: calc(1rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-2 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(0.5rem * var(--tw-space-x-reverse));\n  margin-left: calc(0.5rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-3 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(0.75rem * var(--tw-space-x-reverse));\n  margin-left: calc(0.75rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-y-\\[18px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(18px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(18px * var(--tw-space-y-reverse));\n}\n.space-x-\\[8px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(8px * var(--tw-space-x-reverse));\n  margin-left: calc(8px * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-y-\\[1\\.5px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(1.5px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(1.5px * var(--tw-space-y-reverse));\n}\n.space-x-8 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(2rem * var(--tw-space-x-reverse));\n  margin-left: calc(2rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-y-\\[22px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(22px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(22px * var(--tw-space-y-reverse));\n}\n.space-y-\\[0px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(0px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(0px * var(--tw-space-y-reverse));\n}\n.space-x-\\[12px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(12px * var(--tw-space-x-reverse));\n  margin-left: calc(12px * calc(1 - var(--tw-space-x-reverse)));\n}\n.overflow-hidden {\n  overflow: hidden;\n}\n.overflow-y-hidden {\n  overflow-y: hidden;\n}\n.rounded-full {\n  border-radius: 9999px;\n}\n.rounded-lg {\n  border-radius: 0.5rem;\n}\n.rounded-md {\n  border-radius: 0.375rem;\n}\n.rounded-sm {\n  border-radius: 0.125rem;\n}\n.rounded-none {\n  border-radius: 0px;\n}\n.rounded-\\[5px\\] {\n  border-radius: 5px;\n}\n.border {\n  border-width: 1px;\n}\n.border-t {\n  border-top-width: 1px;\n}\n.border-b {\n  border-bottom-width: 1px;\n}\n.border-none {\n  border-style: none;\n}\n.border-neutral-700 {\n  --tw-border-opacity: 1;\n  border-color: rgb(64 64 64 / var(--tw-border-opacity));\n}\n.border-neutral-600 {\n  --tw-border-opacity: 1;\n  border-color: rgb(82 82 82 / var(--tw-border-opacity));\n}\n.border-\\[rgba\\(0\\2c 0\\2c 0\\2c 0\\)\\] {\n  border-color: rgba(0,0,0,0);\n}\n.border-neutral-800 {\n  --tw-border-opacity: 1;\n  border-color: rgb(38 38 38 / var(--tw-border-opacity));\n}\n.border-t-neutral-900 {\n  --tw-border-opacity: 1;\n  border-top-color: rgb(23 23 23 / var(--tw-border-opacity));\n}\n.border-b-\\[\\#121212\\] {\n  --tw-border-opacity: 1;\n  border-bottom-color: rgb(18 18 18 / var(--tw-border-opacity));\n}\n.bg-blue-900 {\n  --tw-bg-opacity: 1;\n  background-color: rgb(30 58 138 / var(--tw-bg-opacity));\n}\n.bg-\\[\\#0d0d0d\\] {\n  --tw-bg-opacity: 1;\n  background-color: rgb(13 13 13 / var(--tw-bg-opacity));\n}\n.bg-blue-800 {\n  --tw-bg-opacity: 1;\n  background-color: rgb(30 64 175 / var(--tw-bg-opacity));\n}\n.bg-transparent {\n  background-color: transparent;\n}\n.bg-black {\n  --tw-bg-opacity: 1;\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n}\n.bg-white {\n  --tw-bg-opacity: 1;\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n}\n.bg-\\[\\#121212\\] {\n  --tw-bg-opacity: 1;\n  background-color: rgb(18 18 18 / var(--tw-bg-opacity));\n}\n.bg-blue-600 {\n  --tw-bg-opacity: 1;\n  background-color: rgb(37 99 235 / var(--tw-bg-opacity));\n}\n.bg-opacity-10 {\n  --tw-bg-opacity: 0.1;\n}\n.bg-opacity-30 {\n  --tw-bg-opacity: 0.3;\n}\n.bg-opacity-\\[5\\%\\] {\n  --tw-bg-opacity: 5%;\n}\n.bg-opacity-\\[3\\%\\] {\n  --tw-bg-opacity: 3%;\n}\n.bg-opacity-\\[2\\%\\] {\n  --tw-bg-opacity: 2%;\n}\n.bg-cover {\n  background-size: cover;\n}\n.p-6 {\n  padding: 1.5rem;\n}\n.py-3 {\n  padding-top: 0.75rem;\n  padding-bottom: 0.75rem;\n}\n.px-3 {\n  padding-left: 0.75rem;\n  padding-right: 0.75rem;\n}\n.px-6 {\n  padding-left: 1.5rem;\n  padding-right: 1.5rem;\n}\n.py-\\[8px\\] {\n  padding-top: 8px;\n  padding-bottom: 8px;\n}\n.px-0 {\n  padding-left: 0px;\n  padding-right: 0px;\n}\n.py-\\[14px\\] {\n  padding-top: 14px;\n  padding-bottom: 14px;\n}\n.py-5 {\n  padding-top: 1.25rem;\n  padding-bottom: 1.25rem;\n}\n.px-4 {\n  padding-left: 1rem;\n  padding-right: 1rem;\n}\n.px-1 {\n  padding-left: 0.25rem;\n  padding-right: 0.25rem;\n}\n.px-2 {\n  padding-left: 0.5rem;\n  padding-right: 0.5rem;\n}\n.py-4 {\n  padding-top: 1rem;\n  padding-bottom: 1rem;\n}\n.px-\\[16px\\] {\n  padding-left: 16px;\n  padding-right: 16px;\n}\n.px-\\[10px\\] {\n  padding-left: 10px;\n  padding-right: 10px;\n}\n.py-\\[6px\\] {\n  padding-top: 6px;\n  padding-bottom: 6px;\n}\n.py-2 {\n  padding-top: 0.5rem;\n  padding-bottom: 0.5rem;\n}\n.py-\\[10px\\] {\n  padding-top: 10px;\n  padding-bottom: 10px;\n}\n.px-5 {\n  padding-left: 1.25rem;\n  padding-right: 1.25rem;\n}\n.py-1 {\n  padding-top: 0.25rem;\n  padding-bottom: 0.25rem;\n}\n.px-8 {\n  padding-left: 2rem;\n  padding-right: 2rem;\n}\n.py-0 {\n  padding-top: 0px;\n  padding-bottom: 0px;\n}\n.pr-\\[44px\\] {\n  padding-right: 44px;\n}\n.pb-\\[2px\\] {\n  padding-bottom: 2px;\n}\n.pt-\\[16px\\] {\n  padding-top: 16px;\n}\n.pt-1 {\n  padding-top: 0.25rem;\n}\n.pt-4 {\n  padding-top: 1rem;\n}\n.pl-1 {\n  padding-left: 0.25rem;\n}\n.pt-0 {\n  padding-top: 0px;\n}\n.pt-5 {\n  padding-top: 1.25rem;\n}\n.pt-\\[1px\\] {\n  padding-top: 1px;\n}\n.pt-\\[18\\.5px\\] {\n  padding-top: 18.5px;\n}\n.pl-\\[6px\\] {\n  padding-left: 6px;\n}\n.pl-\\[1px\\] {\n  padding-left: 1px;\n}\n.pt-\\[12px\\] {\n  padding-top: 12px;\n}\n.text-left {\n  text-align: left;\n}\n.text-center {\n  text-align: center;\n}\n.font-sans {\n  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";\n}\n.text-sm {\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n.text-\\[12px\\] {\n  font-size: 12px;\n}\n.text-xl {\n  font-size: 1.25rem;\n  line-height: 1.75rem;\n}\n.text-xs {\n  font-size: 0.75rem;\n  line-height: 1rem;\n}\n.text-\\[13\\.5px\\] {\n  font-size: 13.5px;\n}\n.text-\\[9\\.5px\\] {\n  font-size: 9.5px;\n}\n.text-\\[14\\.5px\\] {\n  font-size: 14.5px;\n}\n.text-\\[13px\\] {\n  font-size: 13px;\n}\n.text-\\[10px\\] {\n  font-size: 10px;\n}\n.text-\\[12\\.75px\\] {\n  font-size: 12.75px;\n}\n.text-\\[15px\\] {\n  font-size: 15px;\n}\n.text-\\[11px\\] {\n  font-size: 11px;\n}\n.text-\\[20px\\] {\n  font-size: 20px;\n}\n.text-\\[14px\\] {\n  font-size: 14px;\n}\n.text-lg {\n  font-size: 1.125rem;\n  line-height: 1.75rem;\n}\n.font-semibold {\n  font-weight: 600;\n}\n.font-bold {\n  font-weight: 700;\n}\n.font-medium {\n  font-weight: 500;\n}\n.leading-5 {\n  line-height: 1.25rem;\n}\n.leading-relaxed {\n  line-height: 1.625;\n}\n.text-white {\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n.text-neutral-400 {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.text-neutral-300 {\n  --tw-text-opacity: 1;\n  color: rgb(212 212 212 / var(--tw-text-opacity));\n}\n.text-blue-500 {\n  --tw-text-opacity: 1;\n  color: rgb(59 130 246 / var(--tw-text-opacity));\n}\n.text-neutral-500 {\n  --tw-text-opacity: 1;\n  color: rgb(115 115 115 / var(--tw-text-opacity));\n}\n.text-\\[\\#7b7b7b\\] {\n  --tw-text-opacity: 1;\n  color: rgb(123 123 123 / var(--tw-text-opacity));\n}\n.text-blue-400 {\n  --tw-text-opacity: 1;\n  color: rgb(96 165 250 / var(--tw-text-opacity));\n}\n.underline {\n  -webkit-text-decoration-line: underline;\n          text-decoration-line: underline;\n}\n.opacity-100 {\n  opacity: 1;\n}\n.opacity-90 {\n  opacity: 0.9;\n}\n.shadow-xl {\n  --tw-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);\n  --tw-shadow-colored: 0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n.shadow-lg {\n  --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);\n  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n.outline-none {\n  outline: 2px solid transparent;\n  outline-offset: 2px;\n}\n\n.font-jost {\n  font-family: "Jost";\n}\n\n@font-face {\n  font-family:"SF-Pro";\n  src: url("/fonts/SF-Pro.ttf") format("truetype");\n}\n\n\n.font-pacifico{\n  font-family: \'Pacifico\', cursive;\n\n}\n\n\n\n\n.selected-sidebar-text {\n  font-weight: 500;\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n\n.unselected-sidebar-text {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n\n.selected-sidebar-bg {\n  border-radius: 0.375rem;\n  --tw-bg-opacity: 1;\n  background-color: rgb(38 38 38 / var(--tw-bg-opacity));\n}\n\n@media (min-width: 1024px) {\n\n  .selected-sidebar-bg {\n    border-radius: 5px;\n  }\n}\n\n/*bg-white bg-opacity-[3.5%] rounded-md*/\n.unselected-sidebar-bg {\n  border-radius: 0px;\n  background-color: transparent;\n}\n\n.menucont {\n  display: flex;\n  flex-direction: column;\n  padding: 0px;\n}\n\n.sidebarwrapper {\n  margin-left: 0px;\n  margin-right: 0px;\n  display: none;\n  height: auto;\n  flex-direction: column;\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.3;\n}\n\n@media (min-width: 768px) {\n\n  .sidebarwrapper {\n    display: flex;\n    padding-top: 12px;\n    padding-bottom: 12px;\n  }\n}\n  \n.colorpicker{\n  background-color: #242424;\n}\n.sidebardivs {\n  margin: 0.5rem;\n  margin-top: 0px;\n  margin-bottom: 0px;\n  margin-bottom: 0.5rem;\n  display: flex;\n  flex-direction: column;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 1rem;\n  padding-right: 1rem;\n  padding-top: 0.75rem;\n  padding-bottom: 0.75rem;\n  padding-top: 0px;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n.sidebarprofile {\n  margin: 0.5rem;\n  margin-top: 0.25rem;\n  margin-bottom: 0.25rem;\n  margin-bottom: 0px;\n  display: flex;\n  flex-direction: column;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 1rem;\n  padding-right: 1rem;\n  padding-top: 0.75rem;\n  padding-bottom: 0px;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n\n.quicktext {\n  display: none;\n}\n\n  .postcont {\n  border-bottom-width: 1px;\n  --tw-border-opacity: 1;\n  border-bottom-color: rgb(38 38 38 / var(--tw-border-opacity));\n  padding-left: 1rem;\n  padding-right: 1.5rem;\n}\n\n.quickcont {\n  margin-bottom: 0px;\n  margin-top: 16px;\n  display: flex;\n  flex-direction: row;\n  align-content: center;\n  align-items: center;\n  border-radius: 0.125rem;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 0.5rem;\n  padding-right: 0.5rem;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n  .profiletext {\n  margin-top: 0.25rem;\n  padding-left: 0px;\n  font-size: 14px;\n  font-weight: 600;\n  --tw-text-opacity: 1;\n  color: rgb(212 212 212 / var(--tw-text-opacity));\n  font-family: "Inter";\n}\n  \n  .logtext {\n  margin-top: auto;\n  margin-bottom: auto;\n  margin-right: 0px;\n  margin-left: auto;\n  font-size: 14px;\n  font-weight: 500;\n  --tw-text-opacity: 1;\n  color: rgb(248 113 113 / var(--tw-text-opacity));\n  font-family: "Inter";\n}\n\n.msgcont {\n  display: none;\n}\n\n.sidebarmessage {\n  margin: 0.5rem;\n  margin-top: 0.25rem;\n  margin-bottom: 0.25rem;\n  display: flex;\n  flex-direction: column;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 1rem;\n  padding-right: 1rem;\n  padding-bottom: 0.75rem;\n  padding-top: 0.25rem;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n.bgcol {\n  display: flex;\n  height: 100vh;\n  width: 100vw;\n  flex-direction: column;\n  --tw-bg-opacity: 1;\n  background-color: rgb(23 23 23 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 100%;\n}\n\n.menumain {\n  display: flex;\n  height: 100vh;\n  flex-direction: column;\n}\n\n.menumain > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));\n}\n\n.menumain {\n  border-radius: 0px;\n  border-bottom-width: 1px;\n  border-left-width: 1px;\n  border-bottom-color: rgb(31 41 55 / var(--tw-border-opacity));\n  border-left-color: rgb(31 41 55 / var(--tw-border-opacity));\n  --tw-border-opacity: 1;\n  border-left-color: rgb(23 23 23 / var(--tw-border-opacity));\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.3;\n  padding-left: 0.25rem;\n  padding-right: 0.25rem;\n  padding-top: 0.75rem;\n  padding-bottom: 0.75rem;\n}\n\n@media (min-width: 768px) {\n\n  .menumain {\n    padding-left: 0.5rem;\n    padding-right: 0.5rem;\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n}\n\n@media (min-width: 1024px) {\n\n  .menumain {\n    width: 13rem;\n  }\n\n  .menumain > :not([hidden]) ~ :not([hidden]) {\n    --tw-space-y-reverse: 0;\n    margin-top: calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));\n    margin-bottom: calc(0.5rem * var(--tw-space-y-reverse));\n  }\n}\n\n.selected-sidebar-icon {\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n\n.unselected-sidebar-icon {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.tab-item-animate {\n  position: absolute;\n  top: 6px;\n  left: 6px;\n  width: calc(100% - 12px);\n  height: 32px;\n  transform-origin: 0 0;\n  transition: transform 0.25s;\n}\n\n.tabs .tabs-item:first-child.active ~ .tab-item-animate {\n  transform: translateX(0) scaleX(0.333);\n}\n\n.tabs .tabs-item:nth-child(2).active ~ .tab-item-animate {\n  transform: translateX(33.333%) scaleX(0.333);\n}\n.tabs .tabs-item:nth-child(3).active ~ .tab-item-animate {\n  transform: translateX(calc(33.333% * 2)) scaleX(0.333);\n}\n\n\n.tag-selected {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(0 0 0 / var(--tw-border-opacity));\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.9;\n  --tw-text-opacity: 1;\n  color: rgb(23 23 23 / var(--tw-text-opacity));\n}\n\n.tag-unselected {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(82 82 82 / var(--tw-border-opacity));\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.2;\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.font-sf{\n  font-family:"SF-Pro";\n}\n\n.font-inter {\n  font-family: "Inter";\n}\n.code {\n  font-family: "Source Code Pro", monospace;\n  display: block;\n  background-color: white;\n  color: #000000;\n  padding: 1em;\n  word-wrap: break-word;\n  white-space: pre-wrap;\n}\n\n.sidenav {\n  height: 100%; /* 100% Full-height */\n  width: 0; /* 0 width - change this with JavaScript */\n  position: fixed; /* Stay in place */\n  z-index: 1; /* Stay on top */\n  top: 0; /* Stay at the top */\n  left: 0;\n  overflow-x: hidden; /* Disable horizontal scroll */\n  padding-top: 60px; /* Place content 60px from the top */\n  transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */\n}\n\n/* The navigation menu links */\n.sidenav a {\n  display: block;\n}\n#midcont {\n  overflow-y: scroll;\n  scrollbar-width: none; /* Firefox */\n  -ms-overflow-style: none;  /* Internet Explorer 10+ */\n}\n#midcont::-webkit-scrollbar { /* WebKit */\n  width: 0;\n  height: 0;\n}\n.truncate{\ntext-overflow: ellipsis;\n\n/* Needed to make it work */\noverflow: hidden;\nwhite-space: nowrap;\n\n}\n\ndiv.fadeMe {\n  \n  background: rgba(0,0,0,0.7); \n  width:      100%;\n  height:     100%; \n  z-index:    10;\n  top:        0; \n  left:       0; \n  position:   fixed; \n}\n.bg-stickytitle{\n  background-color: #0d0d0d;\n}\n\n#publishtextarea{\n  -webkit-text-size-adjust: none;\n     -moz-text-size-adjust: none;\n          text-size-adjust: none;\n\n}\n\n#posttext{\n  -webkit-text-size-adjust: none;\n     -moz-text-size-adjust: none;\n          text-size-adjust: none;\n\n}\n\n.style13{\n  font-size: 14px;\n}\n\n #publishtextarea:focus {\n  outline: 0;\n}\n#popup{\n  z-index: 20;\n}\n\n#tags {\n  overflow-x: scroll;\n  scrollbar-width: none; /* Firefox */\n  -ms-overflow-style: none;  /* Internet Explorer 10+ */\n}\n#tags::-webkit-scrollbar { /* WebKit */\n  width: 0;\n  height: 0;\n}\n\n#myInputField {\n  border:1px solid #ddd;\n  padding: 10px;\n  font-size: 14px;\n}\n.coverdiv{\nbackground-image:\n    linear-gradient(to bottom, rgba(245, 246, 252, 0.52), rgba(0, 0, 0, 0.73)),\n}\n\n.tag {\n  padding-top: 2px;\n  padding-bottom: 2px;\n  --tw-text-opacity: 1;\n  color: rgb(59 130 246 / var(--tw-text-opacity));\n}\n\n[contenteditable=true]:empty:before{\n  content: attr(placeholder);\n  pointer-events: none;\n  color: #a3a3a3;\n  display: block; /* For Firefox */\n}\n\n\n\n.tag span[data-role="remove"] {\n  margin-left: 3px;\n  margin-right: 3px;\n  cursor: pointer;\n}\n\n.tag span[data-role="remove"]:after {\n  content: "x";\n  padding: 0px 2px;\n}\n\n\nselect {\n  margin: 0px;\n  margin-top: 0.5rem;\n  display: block;\n  width: 100%;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  border-radius: 0.25rem;\n  border-width: 1px;\n  border-style: solid;\n  --tw-border-opacity: 1;\n  border-color: rgb(209 213 219 / var(--tw-border-opacity));\n  --tw-bg-opacity: 1;\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n  background-clip: padding-box;\n  background-repeat: no-repeat;\n  padding-left: 0.75rem;\n  padding-right: 0.75rem;\n  padding-top: 0.375rem;\n  padding-bottom: 0.375rem;\n  font-size: 1rem;\n  line-height: 1.5rem;\n  font-weight: 400;\n  --tw-text-opacity: 1;\n  color: rgb(55 65 81 / var(--tw-text-opacity));\n  transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;\n  transition-duration: 150ms;\n  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n}\n\n\nselect:focus {\n  --tw-border-opacity: 1;\n  border-color: rgb(37 99 235 / var(--tw-border-opacity));\n  --tw-bg-opacity: 1;\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n  --tw-text-opacity: 1;\n  color: rgb(55 65 81 / var(--tw-text-opacity));\n  outline: 2px solid transparent;\n  outline-offset: 2px;\n}\n\ntable {\n  margin-left: auto;\n  margin-right: auto;\n  margin-top: 2.5rem;\n  margin-bottom: 2.5rem;\n  width: 66.666667%;\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(229 229 229 / var(--tw-border-opacity));\n  font-family: "Inter";\n}\n\nth {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(255 255 255 / var(--tw-border-opacity));\n  --tw-bg-opacity: 1;\n  background-color: rgb(59 130 246 / var(--tw-bg-opacity));\n  padding: 0.75rem;\n  padding-top: 0.5rem;\n  padding-bottom: 0.5rem;\n  text-align: left;\n  font-weight: 600;\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n\ntd {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(229 229 229 / var(--tw-border-opacity));\n  padding: 0.75rem;\n  padding-top: 0.5rem;\n  padding-bottom: 0.5rem;\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n\n/* Position and style the close button (top right corner) */\n.sidenav .closebtn {\n  position: absolute;\n  top: 0;\n  right: 25px;\n  font-size: 28px;\n  margin-left: 50px;\n}\n@media screen and (max-height: 450px) {\n  .sidenav {\n    padding-top: 15px;\n  }\n  .sidenav a {\n    font-size: 18px;\n  }\n}\n.placeholder\\:text-sm::-moz-placeholder {\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n.placeholder\\:text-sm::placeholder {\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n.placeholder\\:text-xs::-moz-placeholder {\n  font-size: 0.75rem;\n  line-height: 1rem;\n}\n.placeholder\\:text-xs::placeholder {\n  font-size: 0.75rem;\n  line-height: 1rem;\n}\n.placeholder\\:text-neutral-400::-moz-placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.placeholder\\:text-neutral-400::placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.placeholder\\:text-neutral-500::-moz-placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(115 115 115 / var(--tw-text-opacity));\n}\n.placeholder\\:text-neutral-500::placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(115 115 115 / var(--tw-text-opacity));\n}\n@media (min-width: 640px) {\n\n  .sm\\:mt-\\[10px\\] {\n    margin-top: 10px;\n  }\n\n  .sm\\:w-3\\/4 {\n    width: 75%;\n  }\n\n  .sm\\:px-2 {\n    padding-left: 0.5rem;\n    padding-right: 0.5rem;\n  }\n\n  .sm\\:py-4 {\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n}\n@media (min-width: 768px) {\n\n  .md\\:absolute {\n    position: absolute;\n  }\n\n  .md\\:relative {\n    position: relative;\n  }\n\n  .md\\:left-0 {\n    left: 0px;\n  }\n\n  .md\\:right-0 {\n    right: 0px;\n  }\n\n  .md\\:top-\\[11px\\] {\n    top: 11px;\n  }\n\n  .md\\:m-0 {\n    margin: 0px;\n  }\n\n  .md\\:m-5 {\n    margin: 1.25rem;\n  }\n\n  .md\\:mx-auto {\n    margin-left: auto;\n    margin-right: auto;\n  }\n\n  .md\\:mx-5 {\n    margin-left: 1.25rem;\n    margin-right: 1.25rem;\n  }\n\n  .md\\:mx-2 {\n    margin-left: 0.5rem;\n    margin-right: 0.5rem;\n  }\n\n  .md\\:mx-0 {\n    margin-left: 0px;\n    margin-right: 0px;\n  }\n\n  .md\\:mr-0 {\n    margin-right: 0px;\n  }\n\n  .md\\:ml-0 {\n    margin-left: 0px;\n  }\n\n  .md\\:ml-auto {\n    margin-left: auto;\n  }\n\n  .md\\:mr-2 {\n    margin-right: 0.5rem;\n  }\n\n  .md\\:mb-\\[10px\\] {\n    margin-bottom: 10px;\n  }\n\n  .md\\:mt-\\[1px\\] {\n    margin-top: 1px;\n  }\n\n  .md\\:mt-\\[0px\\] {\n    margin-top: 0px;\n  }\n\n  .md\\:mb-3 {\n    margin-bottom: 0.75rem;\n  }\n\n  .md\\:inline-flex {\n    display: inline-flex;\n  }\n\n  .md\\:hidden {\n    display: none;\n  }\n\n  .md\\:h-4 {\n    height: 1rem;\n  }\n\n  .md\\:w-4 {\n    width: 1rem;\n  }\n\n  .md\\:w-96 {\n    width: 24rem;\n  }\n\n  .md\\:w-\\[450px\\] {\n    width: 450px;\n  }\n\n  .md\\:w-\\[100\\%\\] {\n    width: 100%;\n  }\n\n  .md\\:flex-row {\n    flex-direction: row;\n  }\n\n  .md\\:space-y-4 > :not([hidden]) ~ :not([hidden]) {\n    --tw-space-y-reverse: 0;\n    margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));\n    margin-bottom: calc(1rem * var(--tw-space-y-reverse));\n  }\n\n  .md\\:rounded-md {\n    border-radius: 0.375rem;\n  }\n\n  .md\\:rounded-xl {\n    border-radius: 0.75rem;\n  }\n\n  .md\\:bg-opacity-0 {\n    --tw-bg-opacity: 0;\n  }\n\n  .md\\:bg-opacity-20 {\n    --tw-bg-opacity: 0.2;\n  }\n\n  .md\\:py-4 {\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n\n  .md\\:px-7 {\n    padding-left: 1.75rem;\n    padding-right: 1.75rem;\n  }\n\n  .md\\:px-5 {\n    padding-left: 1.25rem;\n    padding-right: 1.25rem;\n  }\n\n  .md\\:px-2 {\n    padding-left: 0.5rem;\n    padding-right: 0.5rem;\n  }\n\n  .md\\:py-3 {\n    padding-top: 0.75rem;\n    padding-bottom: 0.75rem;\n  }\n\n  .md\\:py-10 {\n    padding-top: 2.5rem;\n    padding-bottom: 2.5rem;\n  }\n\n  .md\\:pr-0 {\n    padding-right: 0px;\n  }\n\n  .md\\:text-sm {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n\n  .md\\:text-\\[10\\.5px\\] {\n    font-size: 10.5px;\n  }\n\n  .md\\:text-\\[15\\.9px\\] {\n    font-size: 15.9px;\n  }\n\n  .md\\:text-\\[13\\.5px\\] {\n    font-size: 13.5px;\n  }\n\n  .md\\:text-\\[12px\\] {\n    font-size: 12px;\n  }\n\n  .md\\:text-\\[20\\.75px\\] {\n    font-size: 20.75px;\n  }\n\n  .md\\:text-\\[14\\.5px\\] {\n    font-size: 14.5px;\n  }\n\n  .md\\:leading-normal {\n    line-height: 1.5;\n  }\n\n  .md\\:opacity-90 {\n    opacity: 0.9;\n  }\n\n  .placeholder\\:md\\:text-sm::-moz-placeholder {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n\n  .placeholder\\:md\\:text-sm::placeholder {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n}\n@media (min-width: 1024px) {\n\n  .lg\\:mx-0 {\n    margin-left: 0px;\n    margin-right: 0px;\n  }\n\n  .lg\\:ml-auto {\n    margin-left: auto;\n  }\n\n  .lg\\:mr-2 {\n    margin-right: 0.5rem;\n  }\n\n  .lg\\:mt-3 {\n    margin-top: 0.75rem;\n  }\n\n  .lg\\:mb-5 {\n    margin-bottom: 1.25rem;\n  }\n\n  .lg\\:mb-\\[10px\\] {\n    margin-bottom: 10px;\n  }\n\n  .lg\\:block {\n    display: block;\n  }\n\n  .lg\\:inline-block {\n    display: inline-block;\n  }\n\n  .lg\\:inline-flex {\n    display: inline-flex;\n  }\n\n  .lg\\:h-4 {\n    height: 1rem;\n  }\n\n  .lg\\:h-\\[203px\\] {\n    height: 203px;\n  }\n\n  .lg\\:w-4 {\n    width: 1rem;\n  }\n\n  .lg\\:max-w-\\[430px\\] {\n    max-width: 430px;\n  }\n\n  .lg\\:rounded-xl {\n    border-radius: 0.75rem;\n  }\n\n  .lg\\:px-6 {\n    padding-left: 1.5rem;\n    padding-right: 1.5rem;\n  }\n\n  .lg\\:py-\\[8px\\] {\n    padding-top: 8px;\n    padding-bottom: 8px;\n  }\n\n  .lg\\:py-4 {\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n\n  .lg\\:text-\\[16\\.5px\\] {\n    font-size: 16.5px;\n  }\n\n  .lg\\:text-\\[15px\\] {\n    font-size: 15px;\n  }\n\n  .lg\\:text-\\[20\\.75px\\] {\n    font-size: 20.75px;\n  }\n\n  .lg\\:text-\\[14\\.5px\\] {\n    font-size: 14.5px;\n  }\n\n  .lg\\:leading-relaxed {\n    line-height: 1.625;\n  }\n\n  .lg\\:shadow-lg {\n    --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);\n    --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);\n    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n  }\n}\n@media (min-width: 1280px) {\n\n  .xl\\:absolute {\n    position: absolute;\n  }\n\n  .xl\\:relative {\n    position: relative;\n  }\n\n  .xl\\:left-10 {\n    left: 2.5rem;\n  }\n\n  .xl\\:top-\\[120px\\] {\n    top: 120px;\n  }\n\n  .xl\\:right-0 {\n    right: 0px;\n  }\n\n  .xl\\:top-\\[20px\\] {\n    top: 20px;\n  }\n\n  .xl\\:left-\\[125px\\] {\n    left: 125px;\n  }\n\n  .xl\\:right-\\[90px\\] {\n    right: 90px;\n  }\n\n  .xl\\:top-\\[25px\\] {\n    top: 25px;\n  }\n\n  .xl\\:mx-0 {\n    margin-left: 0px;\n    margin-right: 0px;\n  }\n\n  .xl\\:my-0 {\n    margin-top: 0px;\n    margin-bottom: 0px;\n  }\n\n  .xl\\:mt-0 {\n    margin-top: 0px;\n  }\n\n  .xl\\:mt-\\[0px\\] {\n    margin-top: 0px;\n  }\n\n  .xl\\:block {\n    display: block;\n  }\n\n  .xl\\:h-\\[100px\\] {\n    height: 100px;\n  }\n\n  .xl\\:w-\\[100px\\] {\n    width: 100px;\n  }\n\n  .xl\\:w-full {\n    width: 100%;\n  }\n\n  .xl\\:rounded-md {\n    border-radius: 0.375rem;\n  }\n\n  .xl\\:px-0 {\n    padding-left: 0px;\n    padding-right: 0px;\n  }\n\n  .xl\\:text-left {\n    text-align: left;\n  }\n\n  .xl\\:text-lg {\n    font-size: 1.125rem;\n    line-height: 1.75rem;\n  }\n\n  .xl\\:text-\\[12\\.5px\\] {\n    font-size: 12.5px;\n  }\n\n  .xl\\:text-sm {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n}\n';
+const styles = '/*\n! tailwindcss v3.1.8 | MIT License | https://tailwindcss.com\n*//*\n1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)\n2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)\n*/\n\n*,\n::before,\n::after {\n  box-sizing: border-box; /* 1 */\n  border-width: 0; /* 2 */\n  border-style: solid; /* 2 */\n  border-color: #e5e7eb; /* 2 */\n}\n\n::before,\n::after {\n  --tw-content: \'\';\n}\n\n/*\n1. Use a consistent sensible line-height in all browsers.\n2. Prevent adjustments of font size after orientation changes in iOS.\n3. Use a more readable tab size.\n4. Use the user\'s configured `sans` font-family by default.\n*/\n\nhtml {\n  line-height: 1.5; /* 1 */\n  -webkit-text-size-adjust: 100%; /* 2 */\n  -moz-tab-size: 4; /* 3 */\n  -o-tab-size: 4;\n     tab-size: 4; /* 3 */\n  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* 4 */\n}\n\n/*\n1. Remove the margin in all browsers.\n2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.\n*/\n\nbody {\n  margin: 0; /* 1 */\n  line-height: inherit; /* 2 */\n}\n\n/*\n1. Add the correct height in Firefox.\n2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)\n3. Ensure horizontal rules are visible by default.\n*/\n\nhr {\n  height: 0; /* 1 */\n  color: inherit; /* 2 */\n  border-top-width: 1px; /* 3 */\n}\n\n/*\nAdd the correct text decoration in Chrome, Edge, and Safari.\n*/\n\nabbr:where([title]) {\n  -webkit-text-decoration: underline dotted;\n          text-decoration: underline dotted;\n}\n\n/*\nRemove the default font size and weight for headings.\n*/\n\nh1,\nh2,\nh3,\nh4,\nh5,\nh6 {\n  font-size: inherit;\n  font-weight: inherit;\n}\n\n/*\nReset links to optimize for opt-in styling instead of opt-out.\n*/\n\na {\n  color: inherit;\n  text-decoration: inherit;\n}\n\n/*\nAdd the correct font weight in Edge and Safari.\n*/\n\nb,\nstrong {\n  font-weight: bolder;\n}\n\n/*\n1. Use the user\'s configured `mono` font family by default.\n2. Correct the odd `em` font sizing in all browsers.\n*/\n\ncode,\nkbd,\nsamp,\npre {\n  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* 1 */\n  font-size: 1em; /* 2 */\n}\n\n/*\nAdd the correct font size in all browsers.\n*/\n\nsmall {\n  font-size: 80%;\n}\n\n/*\nPrevent `sub` and `sup` elements from affecting the line height in all browsers.\n*/\n\nsub,\nsup {\n  font-size: 75%;\n  line-height: 0;\n  position: relative;\n  vertical-align: baseline;\n}\n\nsub {\n  bottom: -0.25em;\n}\n\nsup {\n  top: -0.5em;\n}\n\n/*\n1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)\n2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)\n3. Remove gaps between table borders by default.\n*/\n\ntable {\n  text-indent: 0; /* 1 */\n  border-color: inherit; /* 2 */\n  border-collapse: collapse; /* 3 */\n}\n\n/*\n1. Change the font styles in all browsers.\n2. Remove the margin in Firefox and Safari.\n3. Remove default padding in all browsers.\n*/\n\nbutton,\ninput,\noptgroup,\nselect,\ntextarea {\n  font-family: inherit; /* 1 */\n  font-size: 100%; /* 1 */\n  font-weight: inherit; /* 1 */\n  line-height: inherit; /* 1 */\n  color: inherit; /* 1 */\n  margin: 0; /* 2 */\n  padding: 0; /* 3 */\n}\n\n/*\nRemove the inheritance of text transform in Edge and Firefox.\n*/\n\nbutton,\nselect {\n  text-transform: none;\n}\n\n/*\n1. Correct the inability to style clickable types in iOS and Safari.\n2. Remove default button styles.\n*/\n\nbutton,\n[type=\'button\'],\n[type=\'reset\'],\n[type=\'submit\'] {\n  -webkit-appearance: button; /* 1 */\n  background-color: transparent; /* 2 */\n  background-image: none; /* 2 */\n}\n\n/*\nUse the modern Firefox focus style for all focusable elements.\n*/\n\n:-moz-focusring {\n  outline: auto;\n}\n\n/*\nRemove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)\n*/\n\n:-moz-ui-invalid {\n  box-shadow: none;\n}\n\n/*\nAdd the correct vertical alignment in Chrome and Firefox.\n*/\n\nprogress {\n  vertical-align: baseline;\n}\n\n/*\nCorrect the cursor style of increment and decrement buttons in Safari.\n*/\n\n::-webkit-inner-spin-button,\n::-webkit-outer-spin-button {\n  height: auto;\n}\n\n/*\n1. Correct the odd appearance in Chrome and Safari.\n2. Correct the outline style in Safari.\n*/\n\n[type=\'search\'] {\n  -webkit-appearance: textfield; /* 1 */\n  outline-offset: -2px; /* 2 */\n}\n\n/*\nRemove the inner padding in Chrome and Safari on macOS.\n*/\n\n::-webkit-search-decoration {\n  -webkit-appearance: none;\n}\n\n/*\n1. Correct the inability to style clickable types in iOS and Safari.\n2. Change font properties to `inherit` in Safari.\n*/\n\n::-webkit-file-upload-button {\n  -webkit-appearance: button; /* 1 */\n  font: inherit; /* 2 */\n}\n\n/*\nAdd the correct display in Chrome and Safari.\n*/\n\nsummary {\n  display: list-item;\n}\n\n/*\nRemoves the default spacing and border for appropriate elements.\n*/\n\nblockquote,\ndl,\ndd,\nh1,\nh2,\nh3,\nh4,\nh5,\nh6,\nhr,\nfigure,\np,\npre {\n  margin: 0;\n}\n\nfieldset {\n  margin: 0;\n  padding: 0;\n}\n\nlegend {\n  padding: 0;\n}\n\nol,\nul,\nmenu {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n}\n\n/*\nPrevent resizing textareas horizontally by default.\n*/\n\ntextarea {\n  resize: vertical;\n}\n\n/*\n1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)\n2. Set the default placeholder color to the user\'s configured gray 400 color.\n*/\n\ninput::-moz-placeholder, textarea::-moz-placeholder {\n  opacity: 1; /* 1 */\n  color: #9ca3af; /* 2 */\n}\n\ninput::placeholder,\ntextarea::placeholder {\n  opacity: 1; /* 1 */\n  color: #9ca3af; /* 2 */\n}\n\n/*\nSet the default cursor for buttons.\n*/\n\nbutton,\n[role="button"] {\n  cursor: pointer;\n}\n\n/*\nMake sure disabled buttons don\'t get the pointer cursor.\n*/\n:disabled {\n  cursor: default;\n}\n\n/*\n1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)\n2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)\n   This can trigger a poorly considered lint error in some tools but is included by design.\n*/\n\nimg,\nsvg,\nvideo,\ncanvas,\naudio,\niframe,\nembed,\nobject {\n  display: block; /* 1 */\n  vertical-align: middle; /* 2 */\n}\n\n/*\nConstrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)\n*/\n\nimg,\nvideo {\n  max-width: 100%;\n  height: auto;\n}\n\n*, ::before, ::after {\n  --tw-border-spacing-x: 0;\n  --tw-border-spacing-y: 0;\n  --tw-translate-x: 0;\n  --tw-translate-y: 0;\n  --tw-rotate: 0;\n  --tw-skew-x: 0;\n  --tw-skew-y: 0;\n  --tw-scale-x: 1;\n  --tw-scale-y: 1;\n  --tw-pan-x:  ;\n  --tw-pan-y:  ;\n  --tw-pinch-zoom:  ;\n  --tw-scroll-snap-strictness: proximity;\n  --tw-ordinal:  ;\n  --tw-slashed-zero:  ;\n  --tw-numeric-figure:  ;\n  --tw-numeric-spacing:  ;\n  --tw-numeric-fraction:  ;\n  --tw-ring-inset:  ;\n  --tw-ring-offset-width: 0px;\n  --tw-ring-offset-color: #fff;\n  --tw-ring-color: rgb(59 130 246 / 0.5);\n  --tw-ring-offset-shadow: 0 0 #0000;\n  --tw-ring-shadow: 0 0 #0000;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  --tw-blur:  ;\n  --tw-brightness:  ;\n  --tw-contrast:  ;\n  --tw-grayscale:  ;\n  --tw-hue-rotate:  ;\n  --tw-invert:  ;\n  --tw-saturate:  ;\n  --tw-sepia:  ;\n  --tw-drop-shadow:  ;\n  --tw-backdrop-blur:  ;\n  --tw-backdrop-brightness:  ;\n  --tw-backdrop-contrast:  ;\n  --tw-backdrop-grayscale:  ;\n  --tw-backdrop-hue-rotate:  ;\n  --tw-backdrop-invert:  ;\n  --tw-backdrop-opacity:  ;\n  --tw-backdrop-saturate:  ;\n  --tw-backdrop-sepia:  ;\n}\n\n::backdrop {\n  --tw-border-spacing-x: 0;\n  --tw-border-spacing-y: 0;\n  --tw-translate-x: 0;\n  --tw-translate-y: 0;\n  --tw-rotate: 0;\n  --tw-skew-x: 0;\n  --tw-skew-y: 0;\n  --tw-scale-x: 1;\n  --tw-scale-y: 1;\n  --tw-pan-x:  ;\n  --tw-pan-y:  ;\n  --tw-pinch-zoom:  ;\n  --tw-scroll-snap-strictness: proximity;\n  --tw-ordinal:  ;\n  --tw-slashed-zero:  ;\n  --tw-numeric-figure:  ;\n  --tw-numeric-spacing:  ;\n  --tw-numeric-fraction:  ;\n  --tw-ring-inset:  ;\n  --tw-ring-offset-width: 0px;\n  --tw-ring-offset-color: #fff;\n  --tw-ring-color: rgb(59 130 246 / 0.5);\n  --tw-ring-offset-shadow: 0 0 #0000;\n  --tw-ring-shadow: 0 0 #0000;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  --tw-blur:  ;\n  --tw-brightness:  ;\n  --tw-contrast:  ;\n  --tw-grayscale:  ;\n  --tw-hue-rotate:  ;\n  --tw-invert:  ;\n  --tw-saturate:  ;\n  --tw-sepia:  ;\n  --tw-drop-shadow:  ;\n  --tw-backdrop-blur:  ;\n  --tw-backdrop-brightness:  ;\n  --tw-backdrop-contrast:  ;\n  --tw-backdrop-grayscale:  ;\n  --tw-backdrop-hue-rotate:  ;\n  --tw-backdrop-invert:  ;\n  --tw-backdrop-opacity:  ;\n  --tw-backdrop-saturate:  ;\n  --tw-backdrop-sepia:  ;\n}\n.static {\n  position: static;\n}\n.fixed {\n  position: fixed;\n}\n.absolute {\n  position: absolute;\n}\n.relative {\n  position: relative;\n}\n.sticky {\n  position: sticky;\n}\n.right-0 {\n  right: 0px;\n}\n.right-10 {\n  right: 2.5rem;\n}\n.bottom-24 {\n  bottom: 6rem;\n}\n.top-\\[9px\\] {\n  top: 9px;\n}\n.m-4 {\n  margin: 1rem;\n}\n.m-1 {\n  margin: 0.25rem;\n}\n.m-3 {\n  margin: 0.75rem;\n}\n.mx-auto {\n  margin-left: auto;\n  margin-right: auto;\n}\n.my-1 {\n  margin-top: 0.25rem;\n  margin-bottom: 0.25rem;\n}\n.mx-2 {\n  margin-left: 0.5rem;\n  margin-right: 0.5rem;\n}\n.mx-5 {\n  margin-left: 1.25rem;\n  margin-right: 1.25rem;\n}\n.mx-4 {\n  margin-left: 1rem;\n  margin-right: 1rem;\n}\n.mx-0 {\n  margin-left: 0px;\n  margin-right: 0px;\n}\n.mx-1 {\n  margin-left: 0.25rem;\n  margin-right: 0.25rem;\n}\n.my-auto {\n  margin-top: auto;\n  margin-bottom: auto;\n}\n.my-4 {\n  margin-top: 1rem;\n  margin-bottom: 1rem;\n}\n.my-\\[17px\\] {\n  margin-top: 17px;\n  margin-bottom: 17px;\n}\n.my-5 {\n  margin-top: 1.25rem;\n  margin-bottom: 1.25rem;\n}\n.ml-auto {\n  margin-left: auto;\n}\n.mt-0 {\n  margin-top: 0px;\n}\n.mb-3 {\n  margin-bottom: 0.75rem;\n}\n.mr-6 {\n  margin-right: 1.5rem;\n}\n.mr-1 {\n  margin-right: 0.25rem;\n}\n.mr-\\[6px\\] {\n  margin-right: 6px;\n}\n.mb-\\[8px\\] {\n  margin-bottom: 8px;\n}\n.mt-\\[1\\.5px\\] {\n  margin-top: 1.5px;\n}\n.mt-\\[1px\\] {\n  margin-top: 1px;\n}\n.mb-\\[4px\\] {\n  margin-bottom: 4px;\n}\n.mt-1 {\n  margin-top: 0.25rem;\n}\n.mt-6 {\n  margin-top: 1.5rem;\n}\n.ml-1 {\n  margin-left: 0.25rem;\n}\n.mb-1 {\n  margin-bottom: 0.25rem;\n}\n.mt-auto {\n  margin-top: auto;\n}\n.mr-auto {\n  margin-right: auto;\n}\n.mb-0 {\n  margin-bottom: 0px;\n}\n.mb-\\[13px\\] {\n  margin-bottom: 13px;\n}\n.mt-7 {\n  margin-top: 1.75rem;\n}\n.mt-3 {\n  margin-top: 0.75rem;\n}\n.inline-block {\n  display: inline-block;\n}\n.flex {\n  display: flex;\n}\n.hidden {\n  display: none;\n}\n.h-screen {\n  height: 100vh;\n}\n.h-\\[18px\\] {\n  height: 18px;\n}\n.h-32 {\n  height: 8rem;\n}\n.h-5 {\n  height: 1.25rem;\n}\n.h-8 {\n  height: 2rem;\n}\n.h-full {\n  height: 100%;\n}\n.h-4 {\n  height: 1rem;\n}\n.h-\\[14px\\] {\n  height: 14px;\n}\n.h-10 {\n  height: 2.5rem;\n}\n.h-auto {\n  height: auto;\n}\n.h-20 {\n  height: 5rem;\n}\n.h-36 {\n  height: 9rem;\n}\n.h-44 {\n  height: 11rem;\n}\n.h-max {\n  height: -moz-max-content;\n  height: max-content;\n}\n.max-h-full {\n  max-height: 100%;\n}\n.w-screen {\n  width: 100vw;\n}\n.w-\\[18px\\] {\n  width: 18px;\n}\n.w-72 {\n  width: 18rem;\n}\n.w-5 {\n  width: 1.25rem;\n}\n.w-44 {\n  width: 11rem;\n}\n.w-8 {\n  width: 2rem;\n}\n.w-full {\n  width: 100%;\n}\n.w-max {\n  width: -moz-max-content;\n  width: max-content;\n}\n.w-4 {\n  width: 1rem;\n}\n.w-\\[14px\\] {\n  width: 14px;\n}\n.w-10 {\n  width: 2.5rem;\n}\n.w-20 {\n  width: 5rem;\n}\n.w-28 {\n  width: 7rem;\n}\n.w-auto {\n  width: auto;\n}\n.max-w-\\[350px\\] {\n  max-width: 350px;\n}\n.flex-shrink-0 {\n  flex-shrink: 0;\n}\n.flex-grow {\n  flex-grow: 1;\n}\n.grow {\n  flex-grow: 1;\n}\n.cursor-pointer {\n  cursor: pointer;\n}\n.flex-row {\n  flex-direction: row;\n}\n.flex-row-reverse {\n  flex-direction: row-reverse;\n}\n.flex-col {\n  flex-direction: column;\n}\n.content-center {\n  align-content: center;\n}\n.items-center {\n  align-items: center;\n}\n.space-x-5 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(1.25rem * var(--tw-space-x-reverse));\n  margin-left: calc(1.25rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-\\[10px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(10px * var(--tw-space-x-reverse));\n  margin-left: calc(10px * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-4 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(1rem * var(--tw-space-x-reverse));\n  margin-left: calc(1rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-2 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(0.5rem * var(--tw-space-x-reverse));\n  margin-left: calc(0.5rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-x-3 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(0.75rem * var(--tw-space-x-reverse));\n  margin-left: calc(0.75rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-y-\\[18px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(18px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(18px * var(--tw-space-y-reverse));\n}\n.space-x-\\[8px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(8px * var(--tw-space-x-reverse));\n  margin-left: calc(8px * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-y-\\[1\\.5px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(1.5px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(1.5px * var(--tw-space-y-reverse));\n}\n.space-x-8 > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(2rem * var(--tw-space-x-reverse));\n  margin-left: calc(2rem * calc(1 - var(--tw-space-x-reverse)));\n}\n.space-y-\\[22px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(22px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(22px * var(--tw-space-y-reverse));\n}\n.space-y-\\[0px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(0px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(0px * var(--tw-space-y-reverse));\n}\n.space-x-\\[12px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-x-reverse: 0;\n  margin-right: calc(12px * var(--tw-space-x-reverse));\n  margin-left: calc(12px * calc(1 - var(--tw-space-x-reverse)));\n}\n.overflow-hidden {\n  overflow: hidden;\n}\n.overflow-x-auto {\n  overflow-x: auto;\n}\n.overflow-y-hidden {\n  overflow-y: hidden;\n}\n.rounded-lg {\n  border-radius: 0.5rem;\n}\n.rounded-md {\n  border-radius: 0.375rem;\n}\n.rounded-full {\n  border-radius: 9999px;\n}\n.rounded-sm {\n  border-radius: 0.125rem;\n}\n.rounded-\\[5px\\] {\n  border-radius: 5px;\n}\n.border {\n  border-width: 1px;\n}\n.border-t {\n  border-top-width: 1px;\n}\n.border-b {\n  border-bottom-width: 1px;\n}\n.border-none {\n  border-style: none;\n}\n.border-neutral-700 {\n  --tw-border-opacity: 1;\n  border-color: rgb(64 64 64 / var(--tw-border-opacity));\n}\n.border-neutral-600 {\n  --tw-border-opacity: 1;\n  border-color: rgb(82 82 82 / var(--tw-border-opacity));\n}\n.border-\\[rgba\\(0\\2c 0\\2c 0\\2c 0\\)\\] {\n  border-color: rgba(0,0,0,0);\n}\n.border-neutral-800 {\n  --tw-border-opacity: 1;\n  border-color: rgb(38 38 38 / var(--tw-border-opacity));\n}\n.border-t-neutral-900 {\n  --tw-border-opacity: 1;\n  border-top-color: rgb(23 23 23 / var(--tw-border-opacity));\n}\n.border-b-\\[\\#121212\\] {\n  --tw-border-opacity: 1;\n  border-bottom-color: rgb(18 18 18 / var(--tw-border-opacity));\n}\n.bg-\\[\\#0d0d0d\\] {\n  --tw-bg-opacity: 1;\n  background-color: rgb(13 13 13 / var(--tw-bg-opacity));\n}\n.bg-blue-800 {\n  --tw-bg-opacity: 1;\n  background-color: rgb(30 64 175 / var(--tw-bg-opacity));\n}\n.bg-transparent {\n  background-color: transparent;\n}\n.bg-black {\n  --tw-bg-opacity: 1;\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n}\n.bg-blue-900 {\n  --tw-bg-opacity: 1;\n  background-color: rgb(30 58 138 / var(--tw-bg-opacity));\n}\n.bg-white {\n  --tw-bg-opacity: 1;\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n}\n.bg-\\[\\#121212\\] {\n  --tw-bg-opacity: 1;\n  background-color: rgb(18 18 18 / var(--tw-bg-opacity));\n}\n.bg-blue-600 {\n  --tw-bg-opacity: 1;\n  background-color: rgb(37 99 235 / var(--tw-bg-opacity));\n}\n.bg-opacity-10 {\n  --tw-bg-opacity: 0.1;\n}\n.bg-opacity-30 {\n  --tw-bg-opacity: 0.3;\n}\n.bg-opacity-\\[5\\%\\] {\n  --tw-bg-opacity: 5%;\n}\n.bg-opacity-\\[3\\%\\] {\n  --tw-bg-opacity: 3%;\n}\n.bg-opacity-\\[2\\%\\] {\n  --tw-bg-opacity: 2%;\n}\n.bg-cover {\n  background-size: cover;\n}\n.p-5 {\n  padding: 1.25rem;\n}\n.p-2 {\n  padding: 0.5rem;\n}\n.p-6 {\n  padding: 1.5rem;\n}\n.py-3 {\n  padding-top: 0.75rem;\n  padding-bottom: 0.75rem;\n}\n.px-3 {\n  padding-left: 0.75rem;\n  padding-right: 0.75rem;\n}\n.px-6 {\n  padding-left: 1.5rem;\n  padding-right: 1.5rem;\n}\n.py-\\[8px\\] {\n  padding-top: 8px;\n  padding-bottom: 8px;\n}\n.px-0 {\n  padding-left: 0px;\n  padding-right: 0px;\n}\n.py-\\[14px\\] {\n  padding-top: 14px;\n  padding-bottom: 14px;\n}\n.py-5 {\n  padding-top: 1.25rem;\n  padding-bottom: 1.25rem;\n}\n.px-4 {\n  padding-left: 1rem;\n  padding-right: 1rem;\n}\n.px-1 {\n  padding-left: 0.25rem;\n  padding-right: 0.25rem;\n}\n.px-2 {\n  padding-left: 0.5rem;\n  padding-right: 0.5rem;\n}\n.py-4 {\n  padding-top: 1rem;\n  padding-bottom: 1rem;\n}\n.px-\\[16px\\] {\n  padding-left: 16px;\n  padding-right: 16px;\n}\n.px-\\[10px\\] {\n  padding-left: 10px;\n  padding-right: 10px;\n}\n.py-\\[6px\\] {\n  padding-top: 6px;\n  padding-bottom: 6px;\n}\n.py-2 {\n  padding-top: 0.5rem;\n  padding-bottom: 0.5rem;\n}\n.py-\\[10px\\] {\n  padding-top: 10px;\n  padding-bottom: 10px;\n}\n.px-5 {\n  padding-left: 1.25rem;\n  padding-right: 1.25rem;\n}\n.py-1 {\n  padding-top: 0.25rem;\n  padding-bottom: 0.25rem;\n}\n.px-8 {\n  padding-left: 2rem;\n  padding-right: 2rem;\n}\n.py-0 {\n  padding-top: 0px;\n  padding-bottom: 0px;\n}\n.pr-\\[44px\\] {\n  padding-right: 44px;\n}\n.pb-\\[2px\\] {\n  padding-bottom: 2px;\n}\n.pt-\\[16px\\] {\n  padding-top: 16px;\n}\n.pt-1 {\n  padding-top: 0.25rem;\n}\n.pt-4 {\n  padding-top: 1rem;\n}\n.pl-1 {\n  padding-left: 0.25rem;\n}\n.pt-0 {\n  padding-top: 0px;\n}\n.pt-5 {\n  padding-top: 1.25rem;\n}\n.pt-\\[1px\\] {\n  padding-top: 1px;\n}\n.pt-\\[18\\.5px\\] {\n  padding-top: 18.5px;\n}\n.pl-\\[6px\\] {\n  padding-left: 6px;\n}\n.pl-\\[1px\\] {\n  padding-left: 1px;\n}\n.pt-\\[12px\\] {\n  padding-top: 12px;\n}\n.text-left {\n  text-align: left;\n}\n.text-center {\n  text-align: center;\n}\n.font-sans {\n  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";\n}\n.text-\\[12px\\] {\n  font-size: 12px;\n}\n.text-sm {\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n.text-xl {\n  font-size: 1.25rem;\n  line-height: 1.75rem;\n}\n.text-xs {\n  font-size: 0.75rem;\n  line-height: 1rem;\n}\n.text-\\[13\\.5px\\] {\n  font-size: 13.5px;\n}\n.text-\\[9\\.5px\\] {\n  font-size: 9.5px;\n}\n.text-\\[14\\.5px\\] {\n  font-size: 14.5px;\n}\n.text-\\[13px\\] {\n  font-size: 13px;\n}\n.text-\\[10px\\] {\n  font-size: 10px;\n}\n.text-\\[12\\.75px\\] {\n  font-size: 12.75px;\n}\n.text-\\[15px\\] {\n  font-size: 15px;\n}\n.text-\\[11px\\] {\n  font-size: 11px;\n}\n.text-\\[20px\\] {\n  font-size: 20px;\n}\n.text-\\[14px\\] {\n  font-size: 14px;\n}\n.text-lg {\n  font-size: 1.125rem;\n  line-height: 1.75rem;\n}\n.font-medium {\n  font-weight: 500;\n}\n.font-semibold {\n  font-weight: 600;\n}\n.font-bold {\n  font-weight: 700;\n}\n.leading-5 {\n  line-height: 1.25rem;\n}\n.leading-relaxed {\n  line-height: 1.625;\n}\n.text-neutral-400 {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.text-white {\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n.text-neutral-300 {\n  --tw-text-opacity: 1;\n  color: rgb(212 212 212 / var(--tw-text-opacity));\n}\n.text-blue-500 {\n  --tw-text-opacity: 1;\n  color: rgb(59 130 246 / var(--tw-text-opacity));\n}\n.text-neutral-500 {\n  --tw-text-opacity: 1;\n  color: rgb(115 115 115 / var(--tw-text-opacity));\n}\n.text-\\[\\#7b7b7b\\] {\n  --tw-text-opacity: 1;\n  color: rgb(123 123 123 / var(--tw-text-opacity));\n}\n.text-blue-400 {\n  --tw-text-opacity: 1;\n  color: rgb(96 165 250 / var(--tw-text-opacity));\n}\n.underline {\n  -webkit-text-decoration-line: underline;\n          text-decoration-line: underline;\n}\n.opacity-100 {\n  opacity: 1;\n}\n.opacity-90 {\n  opacity: 0.9;\n}\n.shadow-xl {\n  --tw-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);\n  --tw-shadow-colored: 0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n.shadow-lg {\n  --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);\n  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n.outline-none {\n  outline: 2px solid transparent;\n  outline-offset: 2px;\n}\n\n.font-jost {\n  font-family: "Jost";\n}\n\n@font-face {\n  font-family:"SF-Pro";\n  src: url("/fonts/SF-Pro.ttf") format("truetype");\n}\n\n\n.font-pacifico{\n  font-family: \'Pacifico\', cursive;\n\n}\n\n\n\n\n.selected-sidebar-text {\n  font-weight: 500;\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n\n.unselected-sidebar-text {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n\n.selected-sidebar-bg {\n  border-radius: 0.375rem;\n  --tw-bg-opacity: 1;\n  background-color: rgb(38 38 38 / var(--tw-bg-opacity));\n}\n\n@media (min-width: 1024px) {\n\n  .selected-sidebar-bg {\n    border-radius: 5px;\n  }\n}\n\n/*bg-white bg-opacity-[3.5%] rounded-md*/\n.unselected-sidebar-bg {\n  border-radius: 0px;\n  background-color: transparent;\n}\n\n.menucont {\n  position: fixed;\n  bottom: 0px;\n  display: flex;\n  width: 100vw;\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.3;\n  padding: 0px;\n}\n\n@media (min-width: 768px) {\n\n  .menucont {\n    position: static;\n    width: -moz-max-content;\n    width: max-content;\n    flex-direction: column;\n  }\n}\n\n.sidebarwrapper {\n  margin-left: 0px;\n  margin-right: 0px;\n  display: none;\n  height: auto;\n  flex-direction: column;\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.3;\n}\n\n@media (min-width: 768px) {\n\n  .sidebarwrapper {\n    display: flex;\n    padding-top: 12px;\n    padding-bottom: 12px;\n  }\n}\n  \n.colorpicker{\n  background-color: #242424;\n}\n.sidebardivs {\n  margin: 0.5rem;\n  margin-top: 0px;\n  margin-bottom: 0px;\n  margin-bottom: 0.5rem;\n  display: flex;\n  flex-direction: column;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 1rem;\n  padding-right: 1rem;\n  padding-top: 0.75rem;\n  padding-bottom: 0.75rem;\n  padding-top: 0px;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n.sidebarprofile {\n  margin: 0.5rem;\n  margin-top: 0.25rem;\n  margin-bottom: 0.25rem;\n  margin-bottom: 0px;\n  display: flex;\n  flex-direction: column;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 1rem;\n  padding-right: 1rem;\n  padding-top: 0.75rem;\n  padding-bottom: 0px;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n\n.quicktext {\n  display: none;\n}\n\n  .postcont {\n  border-bottom-width: 1px;\n  --tw-border-opacity: 1;\n  border-bottom-color: rgb(38 38 38 / var(--tw-border-opacity));\n  padding-left: 1rem;\n  padding-right: 1.5rem;\n}\n\n.quickcont {\n  margin-bottom: 0px;\n  margin-top: 16px;\n  display: flex;\n  flex-direction: row;\n  align-content: center;\n  align-items: center;\n  border-radius: 0.125rem;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 0.5rem;\n  padding-right: 0.5rem;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n  .profiletext {\n  margin-top: 0.25rem;\n  padding-left: 0px;\n  font-size: 14px;\n  font-weight: 600;\n  --tw-text-opacity: 1;\n  color: rgb(212 212 212 / var(--tw-text-opacity));\n  font-family: "Inter";\n}\n  \n  .logtext {\n  margin-top: auto;\n  margin-bottom: auto;\n  margin-right: 0px;\n  margin-left: auto;\n  font-size: 14px;\n  font-weight: 500;\n  --tw-text-opacity: 1;\n  color: rgb(248 113 113 / var(--tw-text-opacity));\n  font-family: "Inter";\n}\n\n.msgcont {\n  display: none;\n}\n\n.sidebarmessage {\n  margin: 0.5rem;\n  margin-top: 0.25rem;\n  margin-bottom: 0.25rem;\n  display: flex;\n  flex-direction: column;\n  border-style: none;\n  --tw-bg-opacity: 0;\n  padding-left: 1rem;\n  padding-right: 1rem;\n  padding-bottom: 0.75rem;\n  padding-top: 0.25rem;\n  --tw-shadow: 0 0 #0000;\n  --tw-shadow-colored: 0 0 #0000;\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}\n\n.bgcol {\n  display: flex;\n  height: 100vh;\n  width: 100vw;\n  flex-direction: column;\n  --tw-bg-opacity: 1;\n  background-color: rgb(23 23 23 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 100%;\n}\n\n.menumain {\n  display: flex;\n  height: auto;\n  width: 100%;\n  flex-direction: row;\n  justify-content: center;\n}\n\n.menumain > :not([hidden]) ~ :not([hidden]) {\n  --tw-space-y-reverse: 0;\n  margin-top: calc(0px * calc(1 - var(--tw-space-y-reverse)));\n  margin-bottom: calc(0px * var(--tw-space-y-reverse));\n}\n\n.menumain {\n  border-radius: 0px;\n  border-bottom-width: 1px;\n  border-left-width: 1px;\n  border-bottom-color: rgb(31 41 55 / var(--tw-border-opacity));\n  border-left-color: rgb(31 41 55 / var(--tw-border-opacity));\n  --tw-border-opacity: 1;\n  border-left-color: rgb(23 23 23 / var(--tw-border-opacity));\n  padding-left: 0.25rem;\n  padding-right: 0.25rem;\n  padding-top: 0.75rem;\n  padding-bottom: 0.75rem;\n}\n\n@media (min-width: 768px) {\n\n  .menumain {\n    height: 100vh;\n    width: -moz-max-content;\n    width: max-content;\n    flex-direction: column;\n    justify-content: flex-start;\n  }\n\n  .menumain > :not([hidden]) ~ :not([hidden]) {\n    --tw-space-y-reverse: 0;\n    margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));\n    margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));\n  }\n\n  .menumain {\n    padding-left: 0.5rem;\n    padding-right: 0.5rem;\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n}\n\n@media (min-width: 1024px) {\n\n  .menumain {\n    width: 13rem;\n  }\n\n  .menumain > :not([hidden]) ~ :not([hidden]) {\n    --tw-space-y-reverse: 0;\n    margin-top: calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));\n    margin-bottom: calc(0.5rem * var(--tw-space-y-reverse));\n  }\n}\n\n.selected-sidebar-icon {\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n\n.unselected-sidebar-icon {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.tab-item-animate {\n  position: absolute;\n  top: 6px;\n  left: 6px;\n  width: calc(100% - 12px);\n  height: 32px;\n  transform-origin: 0 0;\n  transition: transform 0.25s;\n}\n\n.tabs .tabs-item:first-child.active ~ .tab-item-animate {\n  transform: translateX(0) scaleX(0.333);\n}\n\n.tabs .tabs-item:nth-child(2).active ~ .tab-item-animate {\n  transform: translateX(33.333%) scaleX(0.333);\n}\n.tabs .tabs-item:nth-child(3).active ~ .tab-item-animate {\n  transform: translateX(calc(33.333% * 2)) scaleX(0.333);\n}\n\n\n.tag-selected {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(0 0 0 / var(--tw-border-opacity));\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.9;\n  --tw-text-opacity: 1;\n  color: rgb(23 23 23 / var(--tw-text-opacity));\n}\n\n.tag-unselected {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(82 82 82 / var(--tw-border-opacity));\n  background-color: rgb(0 0 0 / var(--tw-bg-opacity));\n  --tw-bg-opacity: 0.2;\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.font-sf{\n  font-family:"SF-Pro";\n}\n\n.font-inter {\n  font-family: "Inter";\n}\n.code {\n  font-family: "Source Code Pro", monospace;\n  display: block;\n  background-color: white;\n  color: #000000;\n  padding: 1em;\n  word-wrap: break-word;\n  white-space: pre-wrap;\n}\n\n.sidenav {\n  height: 100%; /* 100% Full-height */\n  width: 0; /* 0 width - change this with JavaScript */\n  position: fixed; /* Stay in place */\n  z-index: 1; /* Stay on top */\n  top: 0; /* Stay at the top */\n  left: 0;\n  overflow-x: hidden; /* Disable horizontal scroll */\n  padding-top: 60px; /* Place content 60px from the top */\n  transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */\n}\n\n/* The navigation menu links */\n.sidenav a {\n  display: block;\n}\n#midcont {\n  overflow-y: scroll;\n  scrollbar-width: none; /* Firefox */\n  -ms-overflow-style: none;  /* Internet Explorer 10+ */\n}\n#midcont::-webkit-scrollbar { /* WebKit */\n  width: 0;\n  height: 0;\n}\n.truncate{\ntext-overflow: ellipsis;\n\n/* Needed to make it work */\noverflow: hidden;\nwhite-space: nowrap;\n\n}\n\ndiv.fadeMe {\n  \n  background: rgba(0,0,0,0.7); \n  width:      100%;\n  height:     100%; \n  z-index:    10;\n  top:        0; \n  left:       0; \n  position:   fixed; \n}\n.bg-stickytitle{\n  background-color: #0d0d0d;\n}\n\n#publishtextarea{\n  -webkit-text-size-adjust: none;\n     -moz-text-size-adjust: none;\n          text-size-adjust: none;\n\n}\n\n#posttext{\n  -webkit-text-size-adjust: none;\n     -moz-text-size-adjust: none;\n          text-size-adjust: none;\n\n}\n\n.style13{\n  font-size: 14px;\n}\n\n #publishtextarea:focus {\n  outline: 0;\n}\n#popup{\n  z-index: 20;\n}\n\n#tags {\n  overflow-x: scroll;\n  scrollbar-width: none; /* Firefox */\n  -ms-overflow-style: none;  /* Internet Explorer 10+ */\n}\n#tags::-webkit-scrollbar { /* WebKit */\n  width: 0;\n  height: 0;\n}\n\n#myInputField {\n  border:1px solid #ddd;\n  padding: 10px;\n  font-size: 14px;\n}\n.coverdiv{\nbackground-image:\n    linear-gradient(to bottom, rgba(245, 246, 252, 0.52), rgba(0, 0, 0, 0.73)),\n}\n\n.tag {\n  padding-top: 2px;\n  padding-bottom: 2px;\n  --tw-text-opacity: 1;\n  color: rgb(59 130 246 / var(--tw-text-opacity));\n}\n\n[contenteditable=true]:empty:before{\n  content: attr(placeholder);\n  pointer-events: none;\n  color: #a3a3a3;\n  display: block; /* For Firefox */\n}\n\n\n\n.tag span[data-role="remove"] {\n  margin-left: 3px;\n  margin-right: 3px;\n  cursor: pointer;\n}\n\n.tag span[data-role="remove"]:after {\n  content: "x";\n  padding: 0px 2px;\n}\n\n\nselect {\n  margin: 0px;\n  margin-top: 0.5rem;\n  display: block;\n  width: 100%;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  border-radius: 0.25rem;\n  border-width: 1px;\n  border-style: solid;\n  --tw-border-opacity: 1;\n  border-color: rgb(209 213 219 / var(--tw-border-opacity));\n  --tw-bg-opacity: 1;\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n  background-clip: padding-box;\n  background-repeat: no-repeat;\n  padding-left: 0.75rem;\n  padding-right: 0.75rem;\n  padding-top: 0.375rem;\n  padding-bottom: 0.375rem;\n  font-size: 1rem;\n  line-height: 1.5rem;\n  font-weight: 400;\n  --tw-text-opacity: 1;\n  color: rgb(55 65 81 / var(--tw-text-opacity));\n  transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;\n  transition-duration: 150ms;\n  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n}\n\n\nselect:focus {\n  --tw-border-opacity: 1;\n  border-color: rgb(37 99 235 / var(--tw-border-opacity));\n  --tw-bg-opacity: 1;\n  background-color: rgb(255 255 255 / var(--tw-bg-opacity));\n  --tw-text-opacity: 1;\n  color: rgb(55 65 81 / var(--tw-text-opacity));\n  outline: 2px solid transparent;\n  outline-offset: 2px;\n}\n\ntable {\n  margin-left: auto;\n  margin-right: auto;\n  margin-top: 2.5rem;\n  margin-bottom: 2.5rem;\n  width: 66.666667%;\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(229 229 229 / var(--tw-border-opacity));\n  font-family: "Inter";\n}\n\nth {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(255 255 255 / var(--tw-border-opacity));\n  --tw-bg-opacity: 1;\n  background-color: rgb(59 130 246 / var(--tw-bg-opacity));\n  padding: 0.75rem;\n  padding-top: 0.5rem;\n  padding-bottom: 0.5rem;\n  text-align: left;\n  font-weight: 600;\n  --tw-text-opacity: 1;\n  color: rgb(255 255 255 / var(--tw-text-opacity));\n}\n\ntd {\n  border-width: 1px;\n  --tw-border-opacity: 1;\n  border-color: rgb(229 229 229 / var(--tw-border-opacity));\n  padding: 0.75rem;\n  padding-top: 0.5rem;\n  padding-bottom: 0.5rem;\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n\n/* Position and style the close button (top right corner) */\n.sidenav .closebtn {\n  position: absolute;\n  top: 0;\n  right: 25px;\n  font-size: 28px;\n  margin-left: 50px;\n}\n@media screen and (max-height: 450px) {\n  .sidenav {\n    padding-top: 15px;\n  }\n  .sidenav a {\n    font-size: 18px;\n  }\n}\n.placeholder\\:text-sm::-moz-placeholder {\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n.placeholder\\:text-sm::placeholder {\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n}\n.placeholder\\:text-xs::-moz-placeholder {\n  font-size: 0.75rem;\n  line-height: 1rem;\n}\n.placeholder\\:text-xs::placeholder {\n  font-size: 0.75rem;\n  line-height: 1rem;\n}\n.placeholder\\:text-neutral-400::-moz-placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.placeholder\\:text-neutral-400::placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(163 163 163 / var(--tw-text-opacity));\n}\n.placeholder\\:text-neutral-500::-moz-placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(115 115 115 / var(--tw-text-opacity));\n}\n.placeholder\\:text-neutral-500::placeholder {\n  --tw-text-opacity: 1;\n  color: rgb(115 115 115 / var(--tw-text-opacity));\n}\n@media (min-width: 640px) {\n\n  .sm\\:mt-\\[10px\\] {\n    margin-top: 10px;\n  }\n\n  .sm\\:w-3\\/4 {\n    width: 75%;\n  }\n\n  .sm\\:px-2 {\n    padding-left: 0.5rem;\n    padding-right: 0.5rem;\n  }\n\n  .sm\\:py-4 {\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n}\n@media (min-width: 768px) {\n\n  .md\\:absolute {\n    position: absolute;\n  }\n\n  .md\\:left-0 {\n    left: 0px;\n  }\n\n  .md\\:right-0 {\n    right: 0px;\n  }\n\n  .md\\:top-\\[11px\\] {\n    top: 11px;\n  }\n\n  .md\\:m-0 {\n    margin: 0px;\n  }\n\n  .md\\:m-5 {\n    margin: 1.25rem;\n  }\n\n  .md\\:mx-auto {\n    margin-left: auto;\n    margin-right: auto;\n  }\n\n  .md\\:mx-5 {\n    margin-left: 1.25rem;\n    margin-right: 1.25rem;\n  }\n\n  .md\\:mx-2 {\n    margin-left: 0.5rem;\n    margin-right: 0.5rem;\n  }\n\n  .md\\:mx-0 {\n    margin-left: 0px;\n    margin-right: 0px;\n  }\n\n  .md\\:mr-0 {\n    margin-right: 0px;\n  }\n\n  .md\\:ml-0 {\n    margin-left: 0px;\n  }\n\n  .md\\:ml-auto {\n    margin-left: auto;\n  }\n\n  .md\\:mr-2 {\n    margin-right: 0.5rem;\n  }\n\n  .md\\:mt-auto {\n    margin-top: auto;\n  }\n\n  .md\\:mb-\\[10px\\] {\n    margin-bottom: 10px;\n  }\n\n  .md\\:mt-\\[1px\\] {\n    margin-top: 1px;\n  }\n\n  .md\\:mt-\\[0px\\] {\n    margin-top: 0px;\n  }\n\n  .md\\:mb-3 {\n    margin-bottom: 0.75rem;\n  }\n\n  .md\\:inline-flex {\n    display: inline-flex;\n  }\n\n  .md\\:hidden {\n    display: none;\n  }\n\n  .md\\:h-4 {\n    height: 1rem;\n  }\n\n  .md\\:w-96 {\n    width: 24rem;\n  }\n\n  .md\\:w-4 {\n    width: 1rem;\n  }\n\n  .md\\:w-\\[450px\\] {\n    width: 450px;\n  }\n\n  .md\\:w-\\[100\\%\\] {\n    width: 100%;\n  }\n\n  .md\\:flex-row {\n    flex-direction: row;\n  }\n\n  .md\\:space-y-4 > :not([hidden]) ~ :not([hidden]) {\n    --tw-space-y-reverse: 0;\n    margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));\n    margin-bottom: calc(1rem * var(--tw-space-y-reverse));\n  }\n\n  .md\\:rounded-md {\n    border-radius: 0.375rem;\n  }\n\n  .md\\:rounded-xl {\n    border-radius: 0.75rem;\n  }\n\n  .md\\:bg-opacity-0 {\n    --tw-bg-opacity: 0;\n  }\n\n  .md\\:py-4 {\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n\n  .md\\:px-7 {\n    padding-left: 1.75rem;\n    padding-right: 1.75rem;\n  }\n\n  .md\\:px-5 {\n    padding-left: 1.25rem;\n    padding-right: 1.25rem;\n  }\n\n  .md\\:px-2 {\n    padding-left: 0.5rem;\n    padding-right: 0.5rem;\n  }\n\n  .md\\:py-10 {\n    padding-top: 2.5rem;\n    padding-bottom: 2.5rem;\n  }\n\n  .md\\:pr-0 {\n    padding-right: 0px;\n  }\n\n  .md\\:text-sm {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n\n  .md\\:text-\\[10\\.5px\\] {\n    font-size: 10.5px;\n  }\n\n  .md\\:text-\\[15\\.9px\\] {\n    font-size: 15.9px;\n  }\n\n  .md\\:text-\\[13\\.5px\\] {\n    font-size: 13.5px;\n  }\n\n  .md\\:text-\\[12px\\] {\n    font-size: 12px;\n  }\n\n  .md\\:text-\\[20\\.75px\\] {\n    font-size: 20.75px;\n  }\n\n  .md\\:text-\\[14\\.5px\\] {\n    font-size: 14.5px;\n  }\n\n  .md\\:leading-normal {\n    line-height: 1.5;\n  }\n\n  .md\\:opacity-90 {\n    opacity: 0.9;\n  }\n\n  .placeholder\\:md\\:text-sm::-moz-placeholder {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n\n  .placeholder\\:md\\:text-sm::placeholder {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n}\n@media (min-width: 1024px) {\n\n  .lg\\:mx-0 {\n    margin-left: 0px;\n    margin-right: 0px;\n  }\n\n  .lg\\:ml-auto {\n    margin-left: auto;\n  }\n\n  .lg\\:mr-2 {\n    margin-right: 0.5rem;\n  }\n\n  .lg\\:mt-3 {\n    margin-top: 0.75rem;\n  }\n\n  .lg\\:mb-5 {\n    margin-bottom: 1.25rem;\n  }\n\n  .lg\\:mb-\\[10px\\] {\n    margin-bottom: 10px;\n  }\n\n  .lg\\:block {\n    display: block;\n  }\n\n  .lg\\:inline-block {\n    display: inline-block;\n  }\n\n  .lg\\:inline-flex {\n    display: inline-flex;\n  }\n\n  .lg\\:h-4 {\n    height: 1rem;\n  }\n\n  .lg\\:h-\\[203px\\] {\n    height: 203px;\n  }\n\n  .lg\\:w-4 {\n    width: 1rem;\n  }\n\n  .lg\\:max-w-\\[430px\\] {\n    max-width: 430px;\n  }\n\n  .lg\\:rounded-xl {\n    border-radius: 0.75rem;\n  }\n\n  .lg\\:px-6 {\n    padding-left: 1.5rem;\n    padding-right: 1.5rem;\n  }\n\n  .lg\\:py-\\[8px\\] {\n    padding-top: 8px;\n    padding-bottom: 8px;\n  }\n\n  .lg\\:py-4 {\n    padding-top: 1rem;\n    padding-bottom: 1rem;\n  }\n\n  .lg\\:text-\\[16\\.5px\\] {\n    font-size: 16.5px;\n  }\n\n  .lg\\:text-\\[15px\\] {\n    font-size: 15px;\n  }\n\n  .lg\\:text-\\[20\\.75px\\] {\n    font-size: 20.75px;\n  }\n\n  .lg\\:text-\\[14\\.5px\\] {\n    font-size: 14.5px;\n  }\n\n  .lg\\:leading-relaxed {\n    line-height: 1.625;\n  }\n\n  .lg\\:shadow-lg {\n    --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);\n    --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);\n    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n  }\n}\n@media (min-width: 1280px) {\n\n  .xl\\:absolute {\n    position: absolute;\n  }\n\n  .xl\\:relative {\n    position: relative;\n  }\n\n  .xl\\:left-10 {\n    left: 2.5rem;\n  }\n\n  .xl\\:top-\\[120px\\] {\n    top: 120px;\n  }\n\n  .xl\\:right-0 {\n    right: 0px;\n  }\n\n  .xl\\:top-\\[20px\\] {\n    top: 20px;\n  }\n\n  .xl\\:left-\\[125px\\] {\n    left: 125px;\n  }\n\n  .xl\\:right-\\[90px\\] {\n    right: 90px;\n  }\n\n  .xl\\:top-\\[25px\\] {\n    top: 25px;\n  }\n\n  .xl\\:mx-0 {\n    margin-left: 0px;\n    margin-right: 0px;\n  }\n\n  .xl\\:my-0 {\n    margin-top: 0px;\n    margin-bottom: 0px;\n  }\n\n  .xl\\:mt-0 {\n    margin-top: 0px;\n  }\n\n  .xl\\:mt-\\[0px\\] {\n    margin-top: 0px;\n  }\n\n  .xl\\:block {\n    display: block;\n  }\n\n  .xl\\:h-\\[100px\\] {\n    height: 100px;\n  }\n\n  .xl\\:w-\\[100px\\] {\n    width: 100px;\n  }\n\n  .xl\\:w-full {\n    width: 100%;\n  }\n\n  .xl\\:rounded-md {\n    border-radius: 0.375rem;\n  }\n\n  .xl\\:px-0 {\n    padding-left: 0px;\n    padding-right: 0px;\n  }\n\n  .xl\\:text-left {\n    text-align: left;\n  }\n\n  .xl\\:text-lg {\n    font-size: 1.125rem;\n    line-height: 1.75rem;\n  }\n\n  .xl\\:text-\\[12\\.5px\\] {\n    font-size: 12.5px;\n  }\n\n  .xl\\:text-sm {\n    font-size: 0.875rem;\n    line-height: 1.25rem;\n  }\n}\n';
 const Root = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
   useStylesQrl(inlinedQrl(styles, "s_WZUT0oi3I0A"));
   return /* @__PURE__ */ jsx(QwikCity, {
@@ -6837,6 +4116,7 @@ const Root = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
       /* @__PURE__ */ jsx(Head, {}),
       /* @__PURE__ */ jsx("body", {
         lang: "en",
+        class: "relative w-screen h-screen",
         children: /* @__PURE__ */ jsx(RouterOutlet, {})
       })
     ]
@@ -6848,6 +4128,725 @@ function entry_ssr(opts) {
     ...opts
   });
 }
+const Header = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "w-screen"
+  });
+}, "s_gm3f0H6v3fA"));
+const Menu = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  const loc = useLocation();
+  return /* @__PURE__ */ jsx("div", {
+    class: "menucont",
+    children: /* @__PURE__ */ jsx("div", {
+      class: "menumain ",
+      children: [
+        /* @__PURE__ */ jsx(Link, {
+          id: "central",
+          href: "/",
+          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 md:mx-2 mx-1 py-3 lg:py-[8px] ${loc.pathname === "/" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
+          children: [
+            /* @__PURE__ */ jsx("span", {
+              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
+              "data-icon": "tabler:home"
+            }),
+            /* @__PURE__ */ jsx("span", {
+              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
+              children: "Home"
+            })
+          ]
+        }),
+        /* @__PURE__ */ jsx(Link, {
+          id: "search",
+          href: "/search",
+          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-1 md:mx-2  py-3 lg:py-[8px] ${loc.pathname === "/search" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
+          children: [
+            /* @__PURE__ */ jsx("span", {
+              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
+              "data-icon": "tabler:search"
+            }),
+            /* @__PURE__ */ jsx("span", {
+              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
+              children: "Search"
+            })
+          ]
+        }),
+        /* @__PURE__ */ jsx(Link, {
+          id: "clips",
+          href: "/clips",
+          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 mx-1 md:mx-2  py-3 lg:py-[8px] ${loc.pathname === "/clips" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
+          children: [
+            /* @__PURE__ */ jsx("span", {
+              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
+              "data-icon": "tabler:video"
+            }),
+            /* @__PURE__ */ jsx("span", {
+              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
+              children: "Clips"
+            })
+          ]
+        }),
+        /* @__PURE__ */ jsx(Link, {
+          id: "favourites",
+          href: "/favs",
+          class: mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2  mx-1 md:mx-2  py-3 lg:py-[8px] ${loc.pathname === "/favs" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
+          children: [
+            /* @__PURE__ */ jsx("span", {
+              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
+              "data-icon": "ant-design:heart"
+            }),
+            /* @__PURE__ */ jsx("span", {
+              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
+              children: "Favourites"
+            })
+          ]
+        }),
+        /* @__PURE__ */ jsx(Link, {
+          id: "settings",
+          href: "/settings",
+          class: mutable(`flex  md:mt-auto ml-auto flex-row-reverse items-center content-center space-x-3 px-2  mx-1 mr-[6px] md:mx-2  py-3 lg:py-[8px] ${loc.pathname === "/settings" ? "selected-sidebar-bg selected-sidebar-text selected-sidebar-icon" : "unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon"}`),
+          children: [
+            /* @__PURE__ */ jsx("span", {
+              class: "iconify lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto",
+              "data-icon": "ant-design:setting"
+            }),
+            /* @__PURE__ */ jsx("span", {
+              class: "hidden lg:inline-flex font-inter text-[13.5px] my-auto ",
+              children: "Settings"
+            })
+          ]
+        })
+      ]
+    })
+  });
+}, "s_uwWhp2E5O4I"));
+const Sidebar = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "sidebarwrapper",
+    children: [
+      /* @__PURE__ */ jsx("div", {
+        class: " sidebarprofile",
+        children: /* @__PURE__ */ jsx("div", {
+          class: "py-[10px] pt-0 flex flex-col items-center content-center ",
+          children: [
+            /* @__PURE__ */ jsx("div", {
+              class: "flex flex-row w-full items-center content-center",
+              children: [
+                /* @__PURE__ */ jsx("span", {
+                  class: "profiletext",
+                  children: "Profile"
+                }),
+                /* @__PURE__ */ jsx("div", {
+                  class: "logtext",
+                  children: "Logout"
+                })
+              ]
+            }),
+            /* @__PURE__ */ jsx("div", {
+              class: "flex flex-col mt-6",
+              children: [
+                /* @__PURE__ */ jsx("img", {
+                  class: "w-20 h-20 rounded-full mx-auto",
+                  src: "https://picsum.photos/200/300"
+                }),
+                /* @__PURE__ */ jsx("div", {
+                  class: "font-inter font-semibold pt-5 text-md mx-auto text-neutral-300 my-auto",
+                  children: "Admin Acct"
+                }),
+                /* @__PURE__ */ jsx("div", {
+                  class: "font-inter font-medium pt-[1px] text-[12.75px] mx-auto text-neutral-500 my-auto",
+                  children: "@admin"
+                }),
+                /* @__PURE__ */ jsx("div", {
+                  class: "font-inter font-medium pt-[18.5px] text-sm mx-auto text-neutral-400 my-auto",
+                  children: "I am the admin of this app"
+                })
+              ]
+            })
+          ]
+        })
+      }),
+      /* @__PURE__ */ jsx("div", {
+        class: "sidebardivs",
+        children: [
+          /* @__PURE__ */ jsx("span", {
+            class: "quicktext",
+            children: "Quick Actions"
+          }),
+          /* @__PURE__ */ jsx("div", {
+            class: "quickcont",
+            children: /* @__PURE__ */ jsx("div", {
+              class: "flex flex-row space-x-4 mx-auto items-center content-center",
+              children: [
+                /* @__PURE__ */ jsx("button", {
+                  class: "py-2 px-5 bg-white bg-opacity-[2%] rounded-md",
+                  children: /* @__PURE__ */ jsx("span", {
+                    class: "iconify text-neutral-300 w-4 h-4",
+                    "data-icon": "ep:message"
+                  })
+                }),
+                /* @__PURE__ */ jsx("button", {
+                  class: "py-2 px-5 hidden lg:block bg-white bg-opacity-[2%] rounded-md",
+                  children: /* @__PURE__ */ jsx("span", {
+                    class: "iconify text-neutral-300 w-4 h-4",
+                    "data-icon": "ep:edit"
+                  })
+                }),
+                /* @__PURE__ */ jsx("button", {
+                  class: "py-2 px-5 bg-white bg-opacity-[2%] rounded-md",
+                  children: /* @__PURE__ */ jsx("span", {
+                    class: "iconify text-neutral-300 w-4 h-4",
+                    "data-icon": "ep:setting"
+                  })
+                }),
+                /* @__PURE__ */ jsx("button", {
+                  class: "py-2 px-5 bg-white bg-opacity-[2%] rounded-md",
+                  children: /* @__PURE__ */ jsx("span", {
+                    class: "iconify text-neutral-300 w-4 h-4",
+                    "data-icon": "ep:user"
+                  })
+                })
+              ]
+            })
+          })
+        ]
+      }),
+      /* @__PURE__ */ jsx("div", {
+        class: "sidebarmessage",
+        children: [
+          /* @__PURE__ */ jsx("div", {
+            class: "msgcont",
+            children: [
+              /* @__PURE__ */ jsx("span", {
+                class: "pl-[6px] mt-1 text-[15px] font-medium text-neutral-300 font-sf",
+                children: "Messages"
+              }),
+              /* @__PURE__ */ jsx("span", {
+                class: "iconify w-5 h-5 ml-auto mr-1 text-neutral-400 my-auto",
+                "data-icon": "ep:edit"
+              })
+            ]
+          }),
+          /* @__PURE__ */ jsx("div", {
+            class: "flex flex-col my-1 py-1 space-y-[22px] px-1",
+            children: [
+              /* @__PURE__ */ jsx("div", {
+                class: "flex flex-row space-x-[10px]",
+                children: [
+                  /* @__PURE__ */ jsx("img", {
+                    class: "w-10 border border-[rgba(0,0,0,0)] flex-shrink-0 h-10 mx-2 mr-1 rounded-md",
+                    src: "https://picsum.photos/100/100"
+                  }),
+                  /* @__PURE__ */ jsx("div", {
+                    class: "flex flex-col my-auto space-y-[0px] relative w-full",
+                    children: [
+                      /* @__PURE__ */ jsx("span", {
+                        class: "text-[13px] font-bold font-sf text-neutral-400",
+                        children: " Bon Jovi "
+                      }),
+                      /* @__PURE__ */ jsx("span", {
+                        class: "text-[11px] font-sf text-neutral-500 pl-[1px]",
+                        children: " Active Yesterday "
+                      })
+                    ]
+                  })
+                ]
+              }),
+              /* @__PURE__ */ jsx("div", {
+                class: "flex flex-row space-x-[10px]",
+                children: [
+                  /* @__PURE__ */ jsx("img", {
+                    class: "w-10 border border-[rgba(0,0,0,0)] flex-shrink-0 h-10 mx-2 mr-1 rounded-md",
+                    src: "https://picsum.photos/100/300"
+                  }),
+                  /* @__PURE__ */ jsx("div", {
+                    class: "flex flex-col my-auto space-y-[0px] relative w-full",
+                    children: [
+                      /* @__PURE__ */ jsx("span", {
+                        class: "text-[13px] font-bold font-sf text-neutral-400",
+                        children: " Test User "
+                      }),
+                      /* @__PURE__ */ jsx("span", {
+                        class: "text-[11px] font-sf text-neutral-500 pl-[1px]",
+                        children: " Online "
+                      })
+                    ]
+                  })
+                ]
+              }),
+              /* @__PURE__ */ jsx("div", {
+                class: "flex flex-row space-x-[10px]",
+                children: [
+                  /* @__PURE__ */ jsx("img", {
+                    class: "w-10 flex-shrink-0 border border-[rgba(0,0,0,0)] h-10 mx-2 mr-1 rounded-md",
+                    src: "https://picsum.photos/100/200"
+                  }),
+                  /* @__PURE__ */ jsx("div", {
+                    class: "flex flex-col my-auto space-y-[0px] relative w-full",
+                    children: [
+                      /* @__PURE__ */ jsx("span", {
+                        class: "text-[13px] font-bold font-sf text-neutral-400",
+                        children: " Trial User "
+                      }),
+                      /* @__PURE__ */ jsx("span", {
+                        class: "text-[11px] font-sf text-neutral-500 pl-[1px]",
+                        children: " Active 3m Ago "
+                      })
+                    ]
+                  })
+                ]
+              })
+            ]
+          })
+        ]
+      })
+    ]
+  });
+}, "s_BtnGjf3PdHw"));
+const layout = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "bgcol",
+    children: [
+      /* @__PURE__ */ jsx(Header, {}),
+      /* @__PURE__ */ jsx("main", {
+        class: "flex flex-row w-screen flex-grow overflow-hidden ",
+        children: [
+          /* @__PURE__ */ jsx(Menu, {}),
+          /* @__PURE__ */ jsx(Slot, {}),
+          /* @__PURE__ */ jsx(Sidebar, {})
+        ]
+      })
+    ]
+  });
+}, "s_yM0L9NCDGUk"));
+const Layout_ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: layout
+}, Symbol.toStringTag, { value: "Module" }));
+const layoutIndex = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "bgcol",
+    children: [
+      /* @__PURE__ */ jsx(Header, {}),
+      /* @__PURE__ */ jsx("main", {
+        class: "flex flex-row md:flex-row w-screen flex-grow overflow-hidden ",
+        children: [
+          /* @__PURE__ */ jsx(Menu, {}),
+          /* @__PURE__ */ jsx(Slot, {}),
+          /* @__PURE__ */ jsx(Sidebar, {})
+        ]
+      })
+    ]
+  });
+}, "s_NcbFhH0Rq0M"));
+const Layoutindex_ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: layoutIndex
+}, Symbol.toStringTag, { value: "Module" }));
+const data$1 = {
+  taylor: {
+    name: "A Taylor Swift",
+    username: "@Taylor_Swift",
+    about: "I make music that i write",
+    cover: "https://iheart-blog.s3.amazonaws.com/banner/originals/0_a_aaaTSwiftBanner.jpg",
+    profile: "https://gracemcgettigan.files.wordpress.com/2015/01/tay.jpg",
+    followers: "129M"
+  },
+  sean: {
+    name: "A Sean Paul",
+    username: "@Sean_Paul",
+    about: "Sean Paul is a Jamaicam singer/songwriter known for his pop classics",
+    cover: "https://i.pinimg.com/originals/30/58/6a/30586a6e4209906100fa2f470cd0a819.jpg",
+    profile: "https://wallpapercave.com/wp/wp5979216.jpg",
+    followers: "69M"
+  }
+};
+const layoutProfile = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  const location = useLocation();
+  location.params.proid;
+  location.params.proid;
+  return /* @__PURE__ */ jsx("div", {
+    class: " flex flex-grow flex-col bg-white bg-opacity-10 md:bg-opacity-0 py-0 md:space-y-4",
+    children: /* @__PURE__ */ jsx("div", {
+      class: "xl:relative md:m-5 m-3",
+      children: [
+        /* @__PURE__ */ jsx("div", {
+          class: `h-44 lg:h-[203px] rounded-lg bg-cover `,
+          style: `background-image:
+linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 10%, rgba(0, 0, 0, .6) 40%, rgba(0, 0, 0, .8) 65%, rgba(0, 0, 0, 1) 100%),
+url('');
+
+background-size: cover;
+
+`
+        }),
+        /* @__PURE__ */ jsx("div", {
+          class: "xl:absolute w-full xl:left-10 xl:top-[120px] xl:right-0 mx-auto mt-7 xl:mt-0 flex flex-col",
+          children: [
+            /* @__PURE__ */ jsx("img", {
+              class: "xl:w-[100px] xl:h-[100px] shadow-xl border border-neutral-800 w-20 mx-auto xl:mx-0 h-20 rounded-full"
+            }),
+            /* @__PURE__ */ jsx("div", {
+              class: "flex-grow flex flex-col xl:block",
+              children: [
+                /* @__PURE__ */ jsx("div", {
+                  class: "flex flex-row xl:top-[20px] xl:left-[125px] mx-auto xl:mx-0 xl:absolute none mt-3 xl:mt-0",
+                  children: /* @__PURE__ */ jsx("div", {
+                    class: " flex flex-col mx-auto xl:mx-0",
+                    children: [
+                      /* @__PURE__ */ jsx("span", {
+                        class: "xl:text-lg mx-auto xl:mx-0 text-lg font-semibold font-sf text-neutral-300"
+                      }),
+                      /* @__PURE__ */ jsx("span", {
+                        class: "xl:text-[12.5px] mt-1 xl:mt-[0px] text-center xl:text-left leading-relaxed xl:px-0 xl:w-full sm:w-3/4 leading-5 xl:mx-0 mx-auto px-8 text-[12px] font-sf text-neutral-400"
+                      })
+                    ]
+                  })
+                }),
+                /* @__PURE__ */ jsx("button", {
+                  class: "xl:absolute xl:right-[90px] shadow-lg xl:top-[25px] px-8 mx-auto xl:mx-0 h-max text-xs xl:text-sm text-white font-semibold bg-blue-600 overflow-y-hidden py-2 xl:my-0 my-5 xl:rounded-md",
+                  children: "Follow"
+                })
+              ]
+            })
+          ]
+        })
+      ]
+    })
+  });
+}, "s_aeoMBoP047Y"));
+const ProfileProidLayoutprofile_ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  data: data$1,
+  default: layoutProfile
+}, Symbol.toStringTag, { value: "Module" }));
+function StoriesView(props) {
+  return /* @__PURE__ */ jsx("div", {
+    style: `background-image:
+linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 10%, rgba(0, 0, 0, .6) 40%, rgba(0, 0, 0, .8) 65%, rgba(0, 0, 0, 1) 100%),
+url('${props.url}');
+
+background-size: cover;
+
+`,
+    class: " flex flex-col h-36 w-28 p-2 rounded-md",
+    children: [
+      /* @__PURE__ */ jsx("img", {
+        class: "rounded-full w-8 h-8 m-1 flex-shrink-0 ",
+        src: props.poster
+      }),
+      /* @__PURE__ */ jsx("span", {
+        class: "text-neutral-300 text-xs ml-1 mb-1 font-inter font-semibold mt-auto text-left",
+        children: props.name
+      })
+    ]
+  });
+}
+const index_index = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  var publishpopup = useStore({
+    state: false
+  });
+  return /* @__PURE__ */ jsx(Fragment, {
+    children: /* @__PURE__ */ jsx("div", {
+      class: "flex flex-col flex-grow ",
+      children: [
+        /* @__PURE__ */ jsx("div", {
+          id: "publish",
+          onClick$: inlinedQrl((event) => {
+            const [publishpopup2] = useLexicalScope();
+            return event.currentTarget == event.target ? (event.stopPropagation(), !publishpopup2.state ? publishpopup2.state = !publishpopup2.state : 0) : 0;
+          }, "s_TlrTEIpSGyw", [
+            publishpopup
+          ]),
+          class: `${!publishpopup.state ? "hidden" : "flex"}  fadeMe  items-center content-center flex flex-row`,
+          children: /* @__PURE__ */ jsx("div", {
+            id: "popup",
+            class: "z-1000 bg-[#0d0d0d] rounded-lg mx-auto",
+            children: [
+              /* @__PURE__ */ jsx("div", {
+                class: "py-3 px-3 flex flex-row",
+                children: [
+                  /* @__PURE__ */ jsx("button", {
+                    onClick$: inlinedQrl(() => {
+                      const [publishpopup2] = useLexicalScope();
+                      return publishpopup2.state = !publishpopup2.state;
+                    }, "s_p8802htc8lU", [
+                      publishpopup
+                    ]),
+                    children: /* @__PURE__ */ jsx("span", {
+                      class: "iconify my-1 mx-2 w-[18px] h-[18px] font-sf text-neutral-400 ",
+                      "data-icon": "clarity:window-close-line"
+                    })
+                  }),
+                  /* @__PURE__ */ jsx("button", {
+                    class: "px-6 ml-auto py-[8px] right-0 ml-auto text-white font-inter font-medium text-[12px] rounded-md bg-blue-800",
+                    children: "Publish"
+                  })
+                ]
+              }),
+              /* @__PURE__ */ jsx("textarea", {
+                id: "publishtextarea",
+                class: " outline-none bg-transparent w-72 md:w-96 h-32 mx-5 rounded-md font-sf placeholder:text-neutral-400 text-white md:text-md text-sm placeholder:text-md md:text-md placeholder:text-sm mt-0 px-0 mb-3 border-none",
+                placeholder: "What's Poppin? @User"
+              }),
+              /* @__PURE__ */ jsx("div", {
+                class: "py-[14px] border-t border-t-neutral-900 px-6 flex flex-row items-center content-center space-x-5",
+                children: [
+                  /* @__PURE__ */ jsx("span", {
+                    class: "iconify ml-auto w-[18px] h-[18px] font-sf text-neutral-400 ",
+                    "data-icon": "ci:image"
+                  }),
+                  /* @__PURE__ */ jsx("span", {
+                    class: "iconify w-[18px] h-[18px] font-sf text-neutral-400 ",
+                    "data-icon": "ci:youtube"
+                  }),
+                  /* @__PURE__ */ jsx("span", {
+                    class: "iconify w-[18px] h-[18px] font-sf text-neutral-400 ",
+                    "data-icon": "fluent:gif-16-filled"
+                  })
+                ]
+              })
+            ]
+          })
+        }),
+        /* @__PURE__ */ jsx("div", {
+          id: "midcont",
+          class: " flex flex-grow flex-col bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md ",
+          children: [
+            /* @__PURE__ */ jsx("button", {
+              onClick$: inlinedQrl(() => {
+                const [publishpopup2] = useLexicalScope();
+                return publishpopup2.state = !publishpopup2.state;
+              }, "s_sI2nNmZV8Kk", [
+                publishpopup
+              ]),
+              class: "fixed flex flex-row space-x-[10px] items-center content-center right-10 bottom-24 md:right-15 md:bottom-15 lg:bottom:20 text-white font-semibold font-inter md:text-md text-sm md:py-4 md:px-7 bg-blue-900 rounded-full",
+              children: [
+                /* @__PURE__ */ jsx("span", {
+                  class: "md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4",
+                  "data-icon": "ep:plus"
+                }),
+                /* @__PURE__ */ jsx("span", {
+                  class: "hidden md:inline-flex",
+                  children: "New Post"
+                })
+              ]
+            }),
+            /* @__PURE__ */ jsx("div", {
+              class: "flex flex-row p-5 space-x-4 overflow-y-hidden overflow-x-auto",
+              children: [
+                /* @__PURE__ */ jsx(StoriesView, {
+                  poster: "https://picsum.photos/100/200",
+                  name: "John Doe",
+                  url: "https://picsum.photos/300/400"
+                }),
+                /* @__PURE__ */ jsx(StoriesView, {
+                  poster: "https://picsum.photos/200/300",
+                  name: "Jack Steyn",
+                  url: "https://picsum.photos/100/400"
+                }),
+                /* @__PURE__ */ jsx(StoriesView, {
+                  poster: "https://picsum.photos/200/200",
+                  name: "Amy Bruce",
+                  url: "https://picsum.photos/200/400"
+                })
+              ]
+            })
+          ]
+        })
+      ]
+    })
+  });
+}, "s_0e3es3vnWuk"));
+const head$5 = {
+  title: "Home"
+};
+const Indexindex = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: index_index,
+  head: head$5
+}, Symbol.toStringTag, { value: "Module" }));
+const index$5 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "h-screen flex flex-col flex-grow"
+  });
+}, "s_j5h3enAr0HE"));
+const head$4 = {
+  title: "Clips"
+};
+const Clips = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: index$5,
+  head: head$4
+}, Symbol.toStringTag, { value: "Module" }));
+const index$4 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "h-screen flex flex-col flex-grow"
+  });
+}, "s_n0b0sGHmkUY"));
+const head$3 = {
+  title: "Favs"
+};
+const Favs = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: index$4,
+  head: head$3
+}, Symbol.toStringTag, { value: "Module" }));
+const index$3 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "h-screen flex flex-col flex-grow"
+  });
+}, "s_iYmIWuy4aaw"));
+const head$2 = {
+  title: "Search"
+};
+const Search = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: index$3,
+  head: head$2
+}, Symbol.toStringTag, { value: "Module" }));
+const index$2 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "h-screen flex flex-col flex-grow"
+  });
+}, "s_tD1BXnbDybA"));
+const head$1 = {
+  title: "Settings"
+};
+const Settings = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: index$2,
+  head: head$1
+}, Symbol.toStringTag, { value: "Module" }));
+const index$1 = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  return /* @__PURE__ */ jsx("div", {
+    class: "h-screen flex flex-col flex-grow"
+  });
+}, "s_uaqIf5ac0DY"));
+const head = {
+  title: "Vids"
+};
+const Vids = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: index$1,
+  head
+}, Symbol.toStringTag, { value: "Module" }));
+const index = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  const location = useLocation();
+  location.params.proid;
+  location.params.proid;
+  location.params.proid;
+  return /* @__PURE__ */ jsx("div", {
+    id: "midcont",
+    class: "h-screen flex flex-col flex-grow md:py-10 p-6 px-8",
+    children: [
+      /* @__PURE__ */ jsx("div", {
+        class: "flex flex-row items-center content-center ",
+        children: [
+          /* @__PURE__ */ jsx("div", {
+            class: "flex flex-row items-center content-center space-x-[12px] mr-auto",
+            children: [
+              /* @__PURE__ */ jsx("img", {
+                class: "w-5 h-5 rounded-full",
+                src: "https://picsum.photos/500/600",
+                children: " "
+              }),
+              /* @__PURE__ */ jsx("h1", {
+                class: "text-[12px] md:text-[12px] font-inter text-neutral-300 opacity-90 ",
+                children: [
+                  /* @__PURE__ */ jsx("span", {
+                    class: "hidden md:inline-flex",
+                    children: "Posted by"
+                  }),
+                  " TeamEvolt"
+                ]
+              })
+            ]
+          }),
+          /* @__PURE__ */ jsx("h1", {
+            class: "text-[12px] md:text-[12px] font-inter text-neutral-400 ",
+            children: "September 19 2022"
+          })
+        ]
+      }),
+      /* @__PURE__ */ jsx("h1", {
+        class: "text-[20px] md:text-[20.75px] lg:text-[20.75px] my-4 mb-0 font-inter font-semibold text-neutral-300 ",
+        children: "Did you expect to see a dynamically rendered post here?"
+      }),
+      /* @__PURE__ */ jsx("h1", {
+        class: "text-[14px] md:text-[14.5px] lg:text-[14.5px] sm:mt-[10px] lg:mt-3 lg:mb-5 my-[17px] mb-[13px] lg:mb-[10px] md:mb-3 font-inter leading-relaxed text-neutral-400 ",
+        children: "Well I did too, and do you know why it isn't the case? Well the guy that had to do backend is high right now. He hasn't been replying to my messages whenever i question him of when he thinks of doing. You understand my situation don't you? I dont care if you don't too"
+      }),
+      /* @__PURE__ */ jsx("div", {
+        class: `  py-3 pt-[12px] ${`flex`}  `,
+        children: [
+          "    ",
+          /* @__PURE__ */ jsx("img", {
+            class: "w-auto rounded-[5px] mx-auto md:mx-0 h-auto",
+            src: "https://picsum.photos/500/600"
+          })
+        ]
+      })
+    ]
+  });
+}, "s_Xo5tmaGPZOs"));
+const PostsPostid = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: index
+}, Symbol.toStringTag, { value: "Module" }));
+const data = {
+  taylor: {
+    name: "Taylor Swift",
+    username: "@Taylor_Swift",
+    about: "I make music that i write",
+    cover: "https://iheart-blog.s3.amazonaws.com/banner/originals/0_a_aaaTSwiftBanner.jpg",
+    profile: "https://gracemcgettigan.files.wordpress.com/2015/01/tay.jpg",
+    followers: "129M"
+  },
+  sean: {
+    name: "A Sean Paul",
+    username: "@Sean_Paul",
+    about: "Sean Paul is a Jamaicam singer/songwriter known for his pop classics",
+    cover: "https://i.pinimg.com/originals/30/58/6a/30586a6e4209906100fa2f470cd0a819.jpg",
+    profile: "https://wallpapercave.com/wp/wp5979216.jpg",
+    followers: "69M"
+  }
+};
+const index_profile = /* @__PURE__ */ componentQrl(inlinedQrl(() => {
+  const location = useLocation();
+  location.params.proid;
+  location.params.proid;
+  return /* @__PURE__ */ jsx(Fragment, {});
+}, "s_26hfKJ9I4hk"));
+const ProfileProidIndexprofile = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  data,
+  default: index_profile
+}, Symbol.toStringTag, { value: "Module" }));
+const Layout = () => Layout_;
+const Layoutindex = () => Layoutindex_;
+const ProfileProidLayoutprofile = () => ProfileProidLayoutprofile_;
+const routes = [
+  [/^\/$/, [Layoutindex, () => Indexindex], void 0, "/", ["q-2d2cbfbc.js", "q-3972aeac.js"]],
+  [/^\/clips\/?$/, [Layout, () => Clips], void 0, "/clips", ["q-dc060538.js", "q-2021c3b9.js"]],
+  [/^\/favs\/?$/, [Layout, () => Favs], void 0, "/favs", ["q-dc060538.js", "q-1a30d5a6.js"]],
+  [/^\/search\/?$/, [Layout, () => Search], void 0, "/search", ["q-dc060538.js", "q-7a83e723.js"]],
+  [/^\/settings\/?$/, [Layout, () => Settings], void 0, "/settings", ["q-dc060538.js", "q-d640bea0.js"]],
+  [/^\/vids\/?$/, [Layout, () => Vids], void 0, "/vids", ["q-dc060538.js", "q-576b246e.js"]],
+  [/^\/posts\/([^/]+?)\/?$/, [Layout, () => PostsPostid], ["postid"], "/posts/[postid]", ["q-dc060538.js", "q-0e6a5856.js"]],
+  [/^\/profile\/([^/]+?)\/?$/, [Layout, ProfileProidLayoutprofile, () => ProfileProidIndexprofile], ["proid"], "/profile/[proid]", ["q-dc060538.js", "q-fbcc2226.js", "q-7b714472.js"]]
+];
+const menus = [];
+const trailingSlash = false;
+const basePathname = "/";
+const cacheModules = true;
+const _qwikCityPlan = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  routes,
+  menus,
+  trailingSlash,
+  basePathname,
+  cacheModules
+}, Symbol.toStringTag, { value: "Module" }));
 export {
   entry_ssr as default
 };

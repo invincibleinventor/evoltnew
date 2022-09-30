@@ -38,7 +38,7 @@
 }
 
 .menucont{
-    @apply flex flex-col p-0
+    @apply flex md:flex-col p-0 bg-black bg-opacity-30 md:static fixed bottom-0 w-screen md:w-max
 }
 
 .sidebarwrapper{
@@ -90,7 +90,7 @@
 }
 
 .menumain{
-   @apply rounded-none px-1 h-screen  border-l border-b border-b-gray-800 border-l-gray-800  md:px-2 bg-black bg-opacity-30  border-l border-l-neutral-900 flex flex-col  lg:space-y-2 space-y-3 lg:w-52 py-3 md:py-4
+   @apply rounded-none px-1 md:h-screen md:w-max w-full h-auto  border-l border-b border-b-gray-800 border-l-gray-800  md:px-2   border-l border-l-neutral-900 flex flex-row md:flex-col justify-center md:justify-start  lg:space-y-2 space-y-0 md:space-y-3  lg:w-52 py-3 md:py-4
 }
 
 .selected-sidebar-icon{

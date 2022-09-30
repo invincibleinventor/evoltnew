@@ -23,10 +23,12 @@
   "devDependencies": {
     "@builder.io/qwik": "latest",
     "@builder.io/qwik-city": "latest",
+    "@netlify/vite-plugin-netlify-edge": "1.1.0",
     "@types/eslint": "latest",
     "@types/express": "latest",
-    "@netlify/vite-plugin-netlify-edge": "1.1.0",
     "@types/node": "latest",
+    "@types/react": "^18.0.21",
+    "@types/react-dom": "^18.0.6",
     "@types/react-linkify": "^1.0.1",
     "@types/react-mentions": "^4.1.6",
     "@typescript-eslint/eslint-plugin": "5.34.0",
@@ -51,10 +53,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-   
-    "@types/react": "^18.0.21",
-    "@types/react-dom": "^18.0.6",
-    "interweave": "^13.0.0",
     "linkify-html": "^4.0.0",
     "linkify-react": "^4.0.0",
     "linkify-string": "^4.0.0",

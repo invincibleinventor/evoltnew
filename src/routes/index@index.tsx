@@ -1,8 +1,7 @@
 import { component$, useStore } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { Post } from '~/components/post/post';
-import { stories } from '~/components/stories/stories';
-import * as React from 'react';
+import   StoriesView   from '~/components/stories/stories';
 
 
 import Linkify from 'linkify-react';
@@ -16,8 +15,7 @@ export default component$(() => {
 return(
   <>
 
-<div class="flex flex-col flex-grow md:relative ">
-<button onClick$={()=>publishpopup.state=!publishpopup.state} class="absolute flex flex-row space-x-[10px] items-center content-center right-10 bottom-10 md:right-15 md:bottom-15  lg:bottom:20 text-white font-semibold  font-inter md:text-md text-sm md:py-4 md:px-7 bg-blue-900 rounded-full"><span class="md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4" data-icon="ep:plus"></span><span class="hidden md:inline-flex">New Post</span></button>
+<div class="flex flex-col flex-grow  ">
 <div id="publish" onClick$={(event)=>event.currentTarget==event.target?( event.stopPropagation(),!publishpopup.state?publishpopup.state=!publishpopup.state:0):0} class={`${!publishpopup.state?'hidden':'flex'}  fadeMe  items-center content-center flex flex-row`}>
 <div id="popup" class="z-1000  bg-[#0d0d0d] rounded-lg mx-auto">
 
@@ -48,27 +46,15 @@ class=" outline-none bg-transparent w-72 md:w-96 h-32 mx-5  rounded-md  font-sf 
    
 
 
+       <div id="midcont" class=" flex flex-grow flex-col  bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md   ">
+       <button onClick$={()=>publishpopup.state=!publishpopup.state} class="fixed flex flex-row space-x-[10px] items-center content-center right-10 bottom-24 md:right-15 md:bottom-15  lg:bottom:20 text-white font-semibold  font-inter md:text-md text-sm md:py-4 md:px-7 bg-blue-900 rounded-full"><span class="md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4" data-icon="ep:plus"></span><span class="hidden md:inline-flex">New Post</span></button>
 
-       <div id="midcont" class="flex flex-grow   flex-col  bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md   ">
-        <Post id="breme" title="breme" about="This is the very first post ever on this app!" user="TeamEvolt" username='@TeamEvolt' poster='https://picsum.photos/300/400' content='This is the first post on #evolt https://evoltchat.com' likes='1' comments='0' published='Yesterday'></Post>
-        <Post id="rant" title="I love how professors still rant about For Loop being unrealistic" about="2019" user="Admin - Evolt" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake' likes='3' comments='0' published='2 Days Ago'></Post>
-        <Post id="first" title="First Image Post" about="2019" user="Admin - Evolt" image="https://picsum.photos/500/600" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='Image Posting test' likes='0' comments='0' published='2 Days Ago'></Post>
-        <Post id="breme" title="breme" about="This is the very first post ever on this app!" user="TeamEvolt" username='@TeamEvolt' poster='https://picsum.photos/300/400' content='This is the first post on #evolt https://evoltchat.com' likes='1' comments='0' published='Yesterday'></Post>
-        <Post id="rant" title="I love how professors still rant about For Loop being unrealistic" about="2019" user="Admin - Evolt" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake' likes='3' comments='0' published='2 Days Ago'></Post>
-        <Post id="first" title="First Image Post" about="2019" user="Admin - Evolt" image="https://picsum.photos/500/600" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='Image Posting test' likes='0' comments='0' published='2 Days Ago'></Post>
-        <Post id="breme" title="breme" about="This is the very first post ever on this app!" user="TeamEvolt" username='@TeamEvolt' poster='https://picsum.photos/300/400' content='This is the first post on #evolt https://evoltchat.com' likes='1' comments='0' published='Yesterday'></Post>
-        <Post id="rant" title="I love how professors still rant about For Loop being unrealistic" about="2019" user="Admin - Evolt" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake' likes='3' comments='0' published='2 Days Ago'></Post>
-        <Post id="first" title="First Image Post" about="2019" user="Admin - Evolt" image="https://picsum.photos/500/600" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='Image Posting test' likes='0' comments='0' published='2 Days Ago'></Post>
-        <Post id="breme" title="breme" about="This is the very first post ever on this app!" user="TeamEvolt" username='@TeamEvolt' poster='https://picsum.photos/300/400' content='This is the first post on #evolt https://evoltchat.com' likes='1' comments='0' published='Yesterday'></Post>
-        <Post id="rant" title="I love how professors still rant about For Loop being unrealistic" about="2019" user="Admin - Evolt" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake' likes='3' comments='0' published='2 Days Ago'></Post>
-        <Post id="first" title="First Image Post" about="2019" user="Admin - Evolt" image="https://picsum.photos/500/600" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='Image Posting test' likes='0' comments='0' published='2 Days Ago'></Post>
-        <Post id="breme" title="breme" about="This is the very first post ever on this app!" user="TeamEvolt" username='@TeamEvolt' poster='https://picsum.photos/300/400' content='This is the first post on #evolt https://evoltchat.com' likes='1' comments='0' published='Yesterday'></Post>
-        <Post id="rant" title="I love how professors still rant about For Loop being unrealistic" about="2019" user="Admin - Evolt" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake' likes='3' comments='0' published='2 Days Ago'></Post>
-        <Post id="first" title="First Image Post" about="2019" user="Admin - Evolt" image="https://picsum.photos/500/600" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='Image Posting test' likes='0' comments='0' published='2 Days Ago'></Post>
-
-        <Post id="breme" title="breme" about="This is the very first post ever on this app!" user="TeamEvolt" username='@TeamEvolt' poster='https://picsum.photos/300/400' content='This is the first post on #evolt https://evoltchat.com' likes='1' comments='0' published='Yesterday'></Post>
-        <Post id="rant" title="I love how professors still rant about For Loop being unrealistic" about="2019" user="Admin - Evolt" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake' likes='3' comments='0' published='2 Days Ago'></Post>
-        <Post id="first" title="First Image Post" about="2019" user="Admin - Evolt" image="https://picsum.photos/500/600" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='Image Posting test' likes='0' comments='0' published='2 Days Ago'></Post>
+	<div class="flex flex-row p-5 space-x-4 overflow-y-hidden overflow-x-auto">
+  <StoriesView poster="https://picsum.photos/100/200" name="John Doe" url="https://picsum.photos/300/400"></StoriesView>
+  <StoriesView poster="https://picsum.photos/200/300" name="Jack Steyn" url="https://picsum.photos/100/400"></StoriesView>
+  <StoriesView poster="https://picsum.photos/200/200" name="Amy Bruce" url="https://picsum.photos/200/400"></StoriesView>
+ 
+</div>
        </div>
 
        </div>

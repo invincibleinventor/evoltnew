@@ -8,7 +8,7 @@ useStyles$(styles)
     
     <QwikCity>
       <Head />
-      <body lang="en">
+      <body lang="en" class="relative w-screen h-screen">
         <RouterOutlet />
       </body>
     </QwikCity>
