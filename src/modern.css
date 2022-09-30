@@ -42,7 +42,7 @@
 }
 
 .sidebarwrapper{
-    @apply   bg-black bg-opacity-30 h-auto hidden md:py-[12px] mx-0 md:flex flex-col  
+    @apply   bg-black bg-opacity-30 h-auto hidden md:py-[12px] mx-0 lg:flex flex-col  
   }
   
 .colorpicker{

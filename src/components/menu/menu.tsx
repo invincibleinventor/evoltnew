@@ -5,7 +5,7 @@ export const Menu = component$(() => {
     return(
       <div class="menucont">
         <div
-        class="menumain "
+        class="menumain md:mx-0 mx-1 "
       >
       <Link id="central" href="/"  class={mutable(`flex flex-row-reverse items-center content-center space-x-3 px-2 md:mx-2 mx-1 py-3 lg:py-[8px] ${loc.pathname==='/'?'selected-sidebar-bg selected-sidebar-text selected-sidebar-icon':'unselected-sidebar-bg unselected-sidebar-text unselected-sidebar-icon'}`)}>
         <span class="iconify  lg:w-4 lg:h-4 w-5 h-5 lg:ml-auto lg:mx-0 mx-2 lg:mr-2 my-auto" data-icon="tabler:home"></span>

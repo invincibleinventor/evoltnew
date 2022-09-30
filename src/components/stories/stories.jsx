@@ -9,7 +9,7 @@ url('${props.url}');
 
 background-size: cover;
 
-`} class=" flex flex-col h-36 w-28 p-2 rounded-md">
+`} class=" flex flex-col flex-shrink-0 h-36 w-28 p-2 rounded-md">
 <img class="rounded-full w-8 h-8 m-1 flex-shrink-0 " src={props.poster}></img>
 <span class="text-neutral-300 text-xs ml-1 mb-1 font-inter font-semibold mt-auto text-left">{props.name}</span>
 		</div>
