@@ -49,7 +49,7 @@ class=" outline-none bg-transparent w-72 md:w-96 h-32 mx-5  rounded-md  font-sf 
 
 
 
-       <div id="midcont" class="flex flex-grow   flex-col  bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md px-2 md:px-4 py-2 md:py-4 space-y-2 ">
+       <div id="midcont" class="flex flex-grow   flex-col  bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md   ">
         <Post id="breme" title="breme" about="This is the very first post ever on this app!" user="TeamEvolt" username='@TeamEvolt' poster='https://picsum.photos/300/400' content='This is the first post on #evolt https://evoltchat.com' likes='1' comments='0' published='Yesterday'></Post>
         <Post id="rant" title="I love how professors still rant about For Loop being unrealistic" about="2019" user="Admin - Evolt" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='cmon guys for loop is always better than while and still some java nerds claim for to be a memory hog. guys grow up for fcks sake' likes='3' comments='0' published='2 Days Ago'></Post>
         <Post id="first" title="First Image Post" about="2019" user="Admin - Evolt" image="https://picsum.photos/500/600" username='@AdminEvolt' poster='https://picsum.photos/200/300' content='Image Posting test' likes='0' comments='0' published='2 Days Ago'></Post>

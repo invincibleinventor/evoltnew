@@ -1,5 +1,4 @@
 import { component$, useStore } from "@builder.io/qwik";
-import { Linkify } from 'react-easy-linkify';
 
 import React from 'react';
 interface mycmpprops{
@@ -29,25 +28,27 @@ export var Post = component$((props: mycmpprops) => {
     return(
     
      <>
-     <div class="flex flex-row  bg-opacity-[25%] bg-black rounded-md my-1 ">
+     <div class="flex flex-row    border-b border-b-[#121212] ">
      <img class={`hidden w-full lg:max-w-[430px] max-h-auto max-w-[350px] absolute  h-full`} src={props.image}></img>
-     <div class="w-max h-full rounded-l-md py-4 px-[16px] bg-black bg-opacity-[20.5%] flex flex-col space-y-[18px]">
+     <div class="w-max h-full py-4 px-[16px] bg-[#121212] flex flex-col space-y-[18px]">
      <span class="text-neutral-500 iconify w-4 h-4" data-icon="ant-design:heart"></span>
      <span class="text-neutral-500 iconify w-4 h-4" data-icon="ant-design:message"></span>
      </div>
         <div class="flex flex-col px-4 py-4">
         
 
-          <div class="flex flex-row items-center content-center mb-[8px] md:mb-[10px] space-x-[8px]">
-            <img class="w-[18px] h-[18px] rounded-full " src={props.poster} > </img>
-            <h1 class="text-[9.5px] md:text-[10.5px] font-sans mt-[1.5px] md:mt-[1px] text-neutral-400 font-medium  ">{props.user}</h1>
+          <div class="flex flex-row bg-white bg-opacity-[3%] w-max px-[10px] py-[6px] rounded-sm items-center content-center mb-[8px] md:mb-[10px] space-x-[8px]">
+          <img class="w-[14px] h-[14px] rounded-full " src={props.poster} > </img>
+
+          <h1 class="text-[9.5px] md:text-[10.5px] font-sans mt-[1.5px] md:mt-[1px] text-neutral-400 font-medium  ">{props.user}</h1>
+
 
           </div>
           <div class="">
-        <h1 onClick$={()=>window.location.href=`/posts/${props.id}`} class={` md:leading-normal leading-5 text-[14.5px] md:text-[15.9px] lg:text-[16.5px] font-inter  ${!props.image?`md:mt-[0px] mt-[1px] mb-[8px] md:mb-[3.5px]`:`md:mt-[0px] mt-[1px] mb-[6px]`} font-medium text-neutral-300 md:opacity-90 `}>{props.title}</h1>
-        <h1 class="text-[12px] md:text-[13.5px] font-inter  text-neutral-400 opacity-80 ">{props.content}</h1>
+        <h1 onClick$={()=>window.location.href=`/posts/${props.id}`} class={` md:leading-normal leading-5 text-[14.5px] cursor-pointer md:text-[15.9px] lg:text-[16.5px] font-inter  ${`md:mt-[0px] mt-[1px] mb-[4px]`} font-medium text-neutral-300 md:opacity-90 `}>{props.title}</h1>
+        <h1 class="text-[12px] md:text-[13.5px] font-inter  text-[#7b7b7b] ">{props.content}</h1>
 
-        <div class={`  py-3 pt-[12px] ${!props.image?`hidden`:`flex`}  `}>    <img class="w-full lg:max-w-[430px] max-h-auto rounded-md max-w-[350px] mx-auto md:mx-0  h-full" src={props.image}></img>
+        <div class={`  py-3 pb-[2px] pt-[16px] ${!props.image?`hidden`:`flex`}  `}>    <img class="w-full lg:max-w-[430px] max-h-full  max-w-[350px] mx-auto md:mx-0  h-full" src={props.image}></img>
 </div>
         </div>
         </div>

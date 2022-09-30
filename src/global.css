@@ -37,7 +37,7 @@
 }
 
 .sidebarwrapper{
-  @apply h-auto hidden md:py-[12px]  md:flex flex-col  space-y-1 md:space-y-[10px]  md:mx-2
+  @apply h-auto bg-opacity-0 hidden md:py-[12px]  md:flex flex-col  space-y-1 md:space-y-[10px]  md:mx-2
 }
 
 .bgcol{

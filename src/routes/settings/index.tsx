@@ -9,5 +9,5 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Vids',
+  title: 'Settings',
 };
