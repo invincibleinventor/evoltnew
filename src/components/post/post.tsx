@@ -45,7 +45,7 @@ export var Post = component$((props: mycmpprops) => {
 
           </div>
           <div class="">
-        <h1 onClick$={()=>window.location.href=`/posts/${props.id}`} class={` md:leading-normal leading-5 text-[14.5px] cursor-pointer md:text-[15.9px] lg:text-[16.5px] font-inter  ${`md:mt-[0px] mt-[1px] mb-[4px]`} font-medium text-neutral-300 md:opacity-90 `}>{props.title}</h1>
+        <h1 onClick$={()=>window.location.href=`/posts/${props.id}`} class={` md:leading-normal leading-5 text-[14.5px] cursor-pointer md:text-[15.9px] lg:text-[16.5px] font-inter  ${`md:mt-[0px] mt-[6px] mb-[4px]`} font-medium text-neutral-300 md:opacity-90 `}>{props.title}</h1>
         <h1 class="text-[12px] md:text-[13.5px] font-inter  text-[#7b7b7b] ">{props.content}</h1>
 
         <div class={`  py-3 pb-[2px] pt-[16px] ${!props.image?`hidden`:`flex`}  `}>    <img class="w-full lg:max-w-[430px] max-h-full  max-w-[350px] mx-auto md:mx-0  h-full" src={props.image}></img>

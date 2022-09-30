@@ -60,6 +60,8 @@ class=" outline-none bg-transparent w-72 md:w-96 h-32 mx-5  rounded-md  font-sf 
  
  
 </div>
+
+<Post title="First Post" about="I am the admin of this app" id="1" user="Admin" username="@admin" published="yesterday" likes="69k" comments="1.4k" content="This is the first post in this app" poster="https://picsum.photos/300/200"></Post>
        </div>
 
        </div>
