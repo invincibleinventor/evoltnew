@@ -4,7 +4,7 @@ import { DocumentHead } from '@builder.io/qwik-city';
 export default component$(() => {
   return (
 
-<div class=" px-5 py-4 md:py-6 md:px-8">
+<div class=" px-5 py-4 md:py-6 md:px-8 border-l border-l-neutral-800">
   <h1 class="text-[21px]  md:text-[21.75px] lg:text-[21.75px] font-semibold font-inter text-neutral-300">Profile</h1>
 </div>
   );
