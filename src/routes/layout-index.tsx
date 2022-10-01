@@ -11,7 +11,7 @@ export default component$(() => {
       <main class="flex flex-row md:flex-row w-screen flex-grow overflow-hidden ">
       
       <Menu />
-      <div class="w-screen">      	<div id="tags" class="flex flex-row w-[100%] p-5 space-x-4">
+      <div class="w-screen">       	<div id="tags" class="flex flex-row w-[100%] p-5 space-x-4">
   <StoriesView onClick$={()=>{console.log('ok')}} poster="https://picsum.photos/100/200" name="John Doe" url="https://picsum.photos/300/400"></StoriesView>
   <StoriesView poster="https://picsum.photos/200/300" name="Jack Steyn" url="https://picsum.photos/100/400"></StoriesView>
   <StoriesView poster="https://picsum.photos/200/200" name="Amy Bruce" url="https://picsum.photos/200/400"></StoriesView>
