@@ -38,8 +38,14 @@
 }
 
 .menucont{
-    @apply flex md:flex-col p-0 bg-black bg-opacity-30 md:static fixed bottom-0 w-screen md:w-max
+    @apply flex md:flex-col p-0 bg-[#101010] md:static fixed bottom-0 w-screen md:w-max
 }
+
+
+.settingsmenucont{
+  @apply flex md:flex-col h-full p-0 bg-[#101010] bg-opacity-30 md:bg-transparent  static w-max
+}
+
 
 .sidebarwrapper{
     @apply   bg-black bg-opacity-30 h-auto hidden md:py-[12px] mx-0 lg:flex flex-col  
@@ -90,7 +96,13 @@
 }
 
 .menumain{
-   @apply rounded-none px-1 md:h-screen md:w-max w-full h-auto  border-l border-b border-b-gray-800 border-l-gray-800  md:px-2   border-l border-l-neutral-900 flex flex-row md:flex-col justify-center md:justify-start  lg:space-y-2 space-y-0 md:space-y-3  lg:w-52 py-3 md:py-4
+   @apply rounded-none px-1 md:h-screen md:w-max w-full h-auto  border-l border-b border-b-gray-800 border-l-gray-800  md:px-2   border-l border-l-neutral-900 flex flex-row md:flex-col justify-center md:justify-start  lg:space-y-3 space-y-0 md:space-y-3  lg:w-52 py-3 md:py-4
+}
+
+.settingsmenumain{
+ 
+   @apply rounded-none px-1 md:h-screen md:w-max h-max     md:px-2    flex flex-col justify-start   space-y-3   md:w-56 py-3 bg-[#101010] bg-opacity-30
+
 }
 
 .selected-sidebar-icon{

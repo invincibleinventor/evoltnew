@@ -1,7 +1,6 @@
 import { component$, useStore } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { Post } from '~/components/post/post';
-import   StoriesView   from '~/components/stories/stories';
 
 
 import Linkify from 'linkify-react';
@@ -50,18 +49,8 @@ class=" outline-none bg-transparent w-72 md:w-96 h-32 mx-5  rounded-md  font-sf 
 
        <div id="midcont" class=" flex flex-grow flex-col  bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md    ">
 
-	<div id="tags" class="flex flex-row w-[100%] p-5 space-x-4">
-  <StoriesView poster="https://picsum.photos/100/200" name="John Doe" url="https://picsum.photos/300/400"></StoriesView>
-  <StoriesView poster="https://picsum.photos/200/300" name="Jack Steyn" url="https://picsum.photos/100/400"></StoriesView>
-  <StoriesView poster="https://picsum.photos/200/200" name="Amy Bruce" url="https://picsum.photos/200/400"></StoriesView>
-  <StoriesView poster="https://picsum.photos/200/100" name="Sino Wells" url="https://picsum.photos/300/300"></StoriesView>
-  <StoriesView poster="https://picsum.photos/300/200" name="Bret Pope" url="https://picsum.photos/200/300"></StoriesView>
-  <StoriesView poster="https://picsum.photos/400/300" name="Steve Chris" url="https://picsum.photos/100/300"></StoriesView>
- 
- 
-</div>
 
-<Post title="First Post" about="I am the admin of this app" id="1" user="Admin" username="@admin" published="yesterday" likes="69k" comments="1.4k" content="This is the first post in this app" poster="https://picsum.photos/300/200"></Post>
+
        </div>
 
        </div>

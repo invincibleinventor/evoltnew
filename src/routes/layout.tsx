@@ -7,7 +7,7 @@ export default component$(() => {
 
   return (
 
-    <div class="bgcol">
+    <div class="bgcol mb-6">
       <Header />
       <main class="flex flex-row w-screen flex-grow overflow-hidden ">
       
