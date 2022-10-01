@@ -11,10 +11,9 @@ export default component$(() => {
    <div class="h-[100%]">
 <Menu />
 </div>
-<div class="">
     
 <Slot />
-</div>
+
       </main>
     </div>
   );
