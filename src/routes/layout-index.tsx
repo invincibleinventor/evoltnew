@@ -20,9 +20,9 @@ export default component$(() => {
   <StoriesView poster="https://picsum.photos/400/300" name="Steve Chris" url="https://picsum.photos/100/300"></StoriesView>
  
  
-</div>
+</div></div>
+
 <Slot />
-</div>
       <Sidebar />
       </main>
     </div>

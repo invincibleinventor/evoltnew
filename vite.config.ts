@@ -7,6 +7,7 @@ import { qwikReact } from "@builder.io/qwik-react";
 
 export default defineConfig(() => {
   return {
+    
     plugins: [
       qwikCity(),
       qwikVite({
