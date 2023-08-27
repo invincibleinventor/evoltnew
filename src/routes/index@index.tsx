@@ -14,8 +14,8 @@ export default component$(() => {
 return(
   <>
 
-<div class="flex flex-col flex-grow w-screen md:relative ">
-<button onClick$={()=>publishpopup.state=!publishpopup.state} class="absolute flex flex-row space-x-[10px] items-center content-center right-10 bottom-24 md:right-15 md:bottom-10  lg:bottom:10 text-white font-semibold  font-inter md:text-md text-sm md:py-4 md:px-7 bg-blue-900 rounded-full"><span class="md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4" data-icon="ep:plus"></span><span class="hidden md:inline-flex">New Post</span></button>
+<div class="flex flex-col flex-grow  md:relative ">
+<button onClick$={()=>publishpopup.state=!publishpopup.state} class="absolute flex flex-row space-x-[10px] items-center content-center right-10 bottom-24 md:right-15 md:bottom-10  lg:bottom:10 text-white font-semibold  font-inter md:text-md text-sm md:py-4 md:px-7 bg-blue-900 rounded-full"><span class="md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4" data-icon="ep:plus"></span><span class="hidden md:inline-flex "><span class="xl:inline-block hidden xl:mr-1">New</span>{" "}Post</span></button>
 
 <div id="publish" onClick$={(event)=>event.currentTarget==event.target?( event.stopPropagation(),!publishpopup.state?publishpopup.state=!publishpopup.state:0):0} class={`${!publishpopup.state?'hidden':'flex'}  fadeMe  items-center content-center flex flex-row`}>
 <div id="popup" class="z-1000  bg-[#0d0d0d] rounded-lg mx-auto">
@@ -49,7 +49,7 @@ class=" outline-none bg-transparent w-72 md:w-96 h-32 mx-5  rounded-md  font-sf 
 
        <div id="midcont" class=" flex flex-grow flex-col  bg-black bg-opacity-10 md:bg-opacity-0 md:rounded-md    ">
 
-
+<Post user={"Admin"} username="@evolt" published="yesterday" id="1" content={"Lorem Ipsum Dolor Sit Amet"} likes="3" poster="https://picsum.photos/300/300" comments="69" about="ok" title="Hello" ></Post>
 
        </div>
 

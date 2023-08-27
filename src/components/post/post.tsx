@@ -22,9 +22,9 @@ about:string
 
 
 
-export var Post = component$((props: mycmpprops) => {
+export const Post = component$((props: mycmpprops) => {
   
-  const options = {}
+  //const options = {}
     return(
     
      <>

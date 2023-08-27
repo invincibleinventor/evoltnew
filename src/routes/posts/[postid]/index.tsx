@@ -27,13 +27,13 @@ export default component$(() => {
 <h1 class="text-[12px]  md:text-[12px] font-inter   text-neutral-400 ">September 19 2022
 </h1>
 </div>
-<h1 class="text-[20px]  md:text-[20.75px] lg:text-[20.75px] my-6 md:my-4  mb-0 font-inter font-semibold  text-neutral-300 ">Example of a dynamically rendered post. Work under progress
+<h1 class="text-[20px]  md:text-[20.75px] lg:text-[20.75px] my-6 md:my-5  mb-0 font-inter font-semibold  text-neutral-300 ">Example of a dynamically rendered post. Work under progress
 </h1>
 
-<h1 class="text-[14px] md:text-[14.5px] lg:text-[14.5px] sm:mt-[10px] lg:mt-3 lg:mb-5 my-[17px] mb-[13px] lg:mb-[10px] md:mb-3 font-inter leading-relaxed text-neutral-400 ">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut egestas sollicitudin odio in egestas. Vivamus commodo massa in lacus luctus, id pellentesque turpis facilisis. Nunc at pharetra lectus, porttitor sollicitudin sapien. Etiam blandit pharetra mollis. Aliquam eget ipsum quis mi semper iaculis. Ut tincidunt tempor diam id tincidunt. 
+<h1 class="text-[14px] md:text-[14.5px] lg:text-[14.5px] md:mt-0 mt-[14px] lg:mb-5  mb-[13px] lg:mb-[10px] md:mb-3 font-inter leading-relaxed text-neutral-400 ">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut egestas sollicitudin odio in egestas. Vivamus commodo massa in lacus luctus, id pellentesque turpis facilisis. Nunc at pharetra lectus, porttitor sollicitudin sapien. Etiam blandit pharetra mollis. Aliquam eget ipsum quis mi semper iaculis. Ut tincidunt tempor diam id tincidunt. 
 </h1>
 
-<div class={`  py-3 pt-[12px] ${!image?`hidden`:`flex`}  `}>    <img class="w-auto rounded-[5px] mx-auto md:mx-0  h-auto" src={image}></img>
+<div class={`  py-3 lg:pt-4 pt-[12px] ${!image?`hidden`:`flex`}  `}>    <img class="w-auto rounded-[5px] mx-auto sm:mx-0  h-auto" src={image}></img>
 </div>
         </div>
     );

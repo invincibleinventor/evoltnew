@@ -95,9 +95,9 @@ export const Sidebar = component$(() => {
               src="https://picsum.photos/100/100"
             />
 
-            <div class="flex flex-col my-auto space-y-[0px] relative w-full">
-              <span class="text-[13px] font-bold font-sf text-neutral-400"> Bon Jovi </span>
-              <span class="text-[11px] font-sf text-neutral-500 pl-[1px]"> Active Yesterday </span>
+            <div class="flex flex-col my-auto space-y-[2px] relative w-full">
+              <span class="text-[13px] font-semibold font-sf text-neutral-400"> Bon Jovi </span>
+              <span class="text-[11px] font-sf text-neutral-500 pl-[0px]"> Active Yesterday </span>
             </div>
           </div>
 
@@ -107,9 +107,9 @@ export const Sidebar = component$(() => {
               src="https://picsum.photos/100/300"
             />
 
-            <div class="flex flex-col my-auto space-y-[0px] relative w-full">
-              <span class="text-[13px] font-bold font-sf text-neutral-400"> Test User </span>
-              <span class="text-[11px] font-sf text-neutral-500 pl-[1px]"> Online </span>
+<div class="flex flex-col my-auto space-y-[2px] relative w-full">
+              <span class="text-[13px] font-semibold font-sf text-neutral-400"> George Bush </span>
+              <span class="text-[11px] font-sf text-neutral-500 pl-[0px]"> Online </span>
             </div>
           </div>
 
@@ -118,9 +118,9 @@ export const Sidebar = component$(() => {
               class="w-10 flex-shrink-0 border border-[rgba(0,0,0,0)] h-10 mx-2 mr-1 rounded-md"
               src="https://picsum.photos/100/200"
             />
-            <div class="flex flex-col my-auto space-y-[0px] relative w-full">
-              <span class="text-[13px] font-bold font-sf text-neutral-400"> Trial User </span>
-              <span class="text-[11px] font-sf text-neutral-500 pl-[1px]"> Active 3m Ago </span>
+             <div class="flex flex-col my-auto space-y-[2px] relative w-full">
+              <span class="text-[13px] font-semibold font-sf text-neutral-400"> Alec Ben </span>
+              <span class="text-[11px] font-sf text-neutral-500 pl-[0px]"> Last Seen on Aug 19</span>
             </div>
           </div>
 
