@@ -7,7 +7,7 @@ import Linkify from 'linkify-react';
 import * as linkify from 'linkifyjs'
 export default component$(() => {
   var publishpopup=useStore({
-    state:false
+    state:falqwikCityse
   }
   )
  
@@ -17,7 +17,7 @@ return(
 <div class="flex flex-col flex-grow  md:relative ">
 <button onClick$={()=>publishpopup.state=!publishpopup.state} class="absolute flex flex-row space-x-[10px] items-center content-center right-10 bottom-24 md:right-15 md:bottom-10  lg:bottom:10 text-white font-semibold  font-inter md:text-md text-sm md:py-4 md:px-7 bg-blue-900 rounded-full"><span class="md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4" data-icon="ep:plus"></span><span class="hidden md:inline-flex "><span class="xl:inline-block hidden xl:mr-1">New</span>{" "}Post</span></button>
 
-<div id="publish" onClick$={(event)=>event.currentTarget==event.target?( event.stopPropagation(),!publishpopup.state?publishpopup.state=!publishpopup.state:0):0} class={`${!publishpopup.state?'hidden':'flex'}  fadeMe  items-center content-center flex flex-row`}>
+<div id="publish" onClick$={(event)=>event.relatedTarget==event.target?( event.stopPropagation(),!publishpopup.state?publishpopup.state=!publishpopup.state:0):0} class={`${!publishpopup.state?'hidden':'flex'}  fadeMe  items-center content-center flex flex-row`}>
 <div id="popup" class="z-1000  bg-[#0d0d0d] rounded-lg mx-auto">
 
      <div class="py-3 px-3 flex flex-row">

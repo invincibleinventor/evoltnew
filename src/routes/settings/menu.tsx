@@ -1,4 +1,4 @@
-import { component$, mutable } from '@builder.io/qwik';
+import { component$ } from '@builder.io/qwik';
 import { Link, useLocation } from '@builder.io/qwik-city';
 export const Menu = component$(() => {
     const loc = useLocation().url;

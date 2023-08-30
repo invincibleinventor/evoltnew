@@ -12,7 +12,7 @@ export const Head = component$(() => {
 
       <title>{head.title ? `${head.title} - Evolt` : `Evolt`}</title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link rel="canonical" href={loc.href} />
+      <link rel="canonical" href={loc.url.href} />
       <link href="https://rsms.me/inter/inter.css" rel="stylesheet" />
     <script src="https://code.iconify.design/2/2.2.1/iconify.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

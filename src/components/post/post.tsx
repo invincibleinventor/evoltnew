@@ -38,7 +38,7 @@ export const Post = component$((props: mycmpprops) => {
         
 
           <div class="flex flex-row bg-white bg-opacity-[3%] w-max px-[10px] py-[6px] rounded-sm items-center content-center mb-[8px] md:mb-[10px] space-x-[8px]">
-          <img class="w-[14px] h-[14px] rounded-full " src={props.poster} > </img>
+          <img class="w-[14px] h-[14px] rounded-full " src={props.poster} ></img>
 
           <h1 class="text-[9.5px] md:text-[10.5px] font-sans mt-[1.5px] md:mt-[1px] text-neutral-400 font-medium  ">{props.user}</h1>
 

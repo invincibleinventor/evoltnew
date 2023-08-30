@@ -1,5 +1,5 @@
 import { useLocation } from '@builder.io/qwik-city';
-import { component$, _useMutableProps } from '@builder.io/qwik';
+import { component$ } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
 
 
@@ -19,7 +19,7 @@ export default component$(() => {
             <div class="flex flex-row items-center content-center  ">
 
             <div class="flex flex-row items-center content-center space-x-[12px] mr-auto">
-            <img class="w-5 h-5 rounded-full" src={image} > </img>
+            <img class="w-5 h-5 rounded-full" src={image} ></img>
                  <h1 class="text-[12px] md:text-[12px] font-inter   text-neutral-300 opacity-90 "><span class="hidden md:inline-flex">Posted by</span> Admin
 </h1>
 </div>
