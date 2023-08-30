@@ -17,6 +17,7 @@
     "fmt.check": "prettier --check .",
     "lint": "eslint \"src/**/*.ts*\"",
     "serve": "node server/entry.express",
+    "servessr": "node server/entry.ssr",
     "start": "npm run dev",
     "typecheck": "tsc --incremental --noEmit"
   },
@@ -61,11 +62,17 @@
   "dependencies": {
     "@emotion/server": "^11.10.0",
     "@supabase/supabase-js": "^2.33.1",
+    "assert": "^2.0.0",
+    "browserify-zlib": "^0.2.0",
+    "buffer": "^6.0.3",
+    "events": "^3.3.0",
+    "https-browserify": "^1.0.0",
     "linkify-html": "^4.0.0",
     "linkify-react": "^4.0.0",
     "linkify-string": "^4.0.0",
     "linkifyjs": "^4.0.0",
     "netlify-cli": "^11.8.2",
+    "punycode": "^2.3.0",
     "react": "^18.2.0",
     "react-contenteditable": "^3.3.6",
     "react-dom": "^18.2.0",
@@ -76,7 +83,11 @@
     "react-pure-modal": "^2.2.0",
     "react-tabs": "^5.1.0",
     "react-tooltip": "^4.2.21",
-    "reactjs-popup": "^2.0.5"
+    "reactjs-popup": "^2.0.5",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "url": "^0.11.1",
+    "util": "^0.12.5"
   },
   "__qwik__": {
     "priority": 1,
