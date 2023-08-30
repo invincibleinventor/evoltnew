@@ -3,7 +3,7 @@ import { qwikVite } from "@builder.io/qwik/optimizer";
 import { qwikCity } from "@builder.io/qwik-city/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import netlifyEdge from "@netlify/vite-plugin-netlify-edge";
-import { qwikReact } from "@builder.io/qwik-react";
+import { qwikReact } from "@builder.io/qwik-react/vite";
 
 export default defineConfig(() => {
   return {
