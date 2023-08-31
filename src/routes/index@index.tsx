@@ -7,7 +7,7 @@ import Linkify from 'linkify-react';
 import * as linkify from 'linkifyjs'
 export default component$(() => {
   var publishpopup=useStore({
-    state:falqwikCityse
+    state:false
   }
   )
  
