@@ -1,5 +1,12 @@
 import { component$ } from "@builder.io/qwik";
-export const Sidebar = component$(() => {
+interface mycmpprops{
+  username:string,
+  name:string,
+  profilepic:string,
+  friends:string,
+  about:string
+}
+export const Sidebar = component$((props:mycmpprops) => {
     return(
         <div
         class="sidebarwrapper"
@@ -15,10 +22,10 @@ export const Sidebar = component$(() => {
   <div class="logtext">Logout</div>
   </div>
   <div class="flex flex-col  mt-6">
-    <img class="w-20 h-20 rounded-full mx-auto" src="https://picsum.photos/200/300"></img>
-    <div class="font-inter font-semibold pt-5 text-md mx-auto text-neutral-300 my-auto">Admin Acct</div>
-    <div class="font-inter font-medium pt-[1px] text-[12.75px] mx-auto text-neutral-500 my-auto">@admin</div>
-    <div class="font-inter font-medium pt-[18.5px] text-sm mx-auto text-neutral-400 my-auto">I am the admin of this app</div>
+    <img class="w-20 h-20 rounded-full mx-auto" src={props.profilepic}></img>
+    <div class="font-inter font-semibold pt-5 text-md mx-auto text-neutral-300 my-auto">{props.name}</div>
+    <div class="font-inter font-medium pt-[1px] text-[12.75px] mx-auto text-neutral-500 my-auto">@{props.username}</div>
+    <div class="font-inter font-medium pt-[18.5px] text-sm mx-auto text-neutral-400 my-auto">{props.about}</div>
 
 
   </div>
