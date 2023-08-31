@@ -71,7 +71,7 @@ async function checkboarding(a){
     return( <div class="bgcol flex flex-col content-center items-center">
       <div class="px-20 py-14 bg-neutral-800 rounded-lg bg-opacity-20 my-auto">
         <h1 class="font-semibold font-sf text-lg text-white text-center mb-8">Sign In to continue</h1>
-<button onClick$={async ()=>signIn()} class=" flex flex-row space-x-[10px] items-center content-center right-0 top-0 left-0 bottom-0 max-w-auto my-auto text-white font-semibold  font-inter md:text-md text-sm md:py-4 px-4 pr-8 md:px-8 bg-red-700 rounded-full"><span class="md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4" data-icon="ant-design:google-outlined"></span><span class="inline-block ">Login With Google</span></button>
+<button onClick$={async ()=>signIn()} class=" flex flex-row space-x-[10px] items-center content-center right-0 top-0 left-0 bottom-0 max-w-auto my-auto text-white font-semibold  font-inter md:text-md text-xs md:py-4 px-4 pr-8 md:px-8 bg-red-700 rounded-full"><span class="md:m-0 m-4 iconify font-bold w-5 h-5 md:w-4 md:h-4" data-icon="ant-design:google-outlined"></span><span class="inline-block ">Login With Google</span></button>
 </div>
     </div>)
  }
