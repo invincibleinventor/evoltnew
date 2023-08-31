@@ -3,7 +3,7 @@ publish = "dist"
 command = "npm run build"
 
 [[edge_functions]]
-path = "/*"
+path = "/"
 function = "entry.netlify-edge"
 
 [dev]
