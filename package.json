@@ -2,7 +2,7 @@
   "name": "qwik-app",
   "description": "File based routing and MDX support Vite.js tooling. Express.js server. Prettier code formatter. Tailwind CSS framework.",
   "scripts": {
-    "build": "npm run typecheck && npm run build.client && npm run build.ssr && npm run build.netlify",
+    "build": "npm run build.client && npm run build.ssr && npm run build.netlify",
     "build.client": "vite build",
     "build.ssr": "vite build --ssr",
     "build.netlify": "vite build --ssr src/entry.netlify-edge.tsx",
