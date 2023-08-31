@@ -41,7 +41,6 @@
     "@typescript-eslint/eslint-plugin": "6.5.0",
     "@typescript-eslint/parser": "6.5.0",
     "autoprefixer": "10.4.15",
-    "eslint": "8.48.0",
     "eslint-plugin-qwik": "1.2.10",
     "express": "latest",
     "netlify-cli": "^15.0.0",
