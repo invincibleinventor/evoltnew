@@ -11,13 +11,13 @@ export default component$(async () => {
       provider: 'google'
     })
   })
- const userDetails = useStore({user:{},details:{}})
+  const userDetails = useStore({user:{},details:{}})
   useVisibleTask$(async ()=>{
     const { data, error } = await supabase.auth.getSession()
     userDetails.user = data.session?data.session.user:{}
     if(error){alert(error)}
      
-  }) 
+  })
  console.log(userDetails.user)
   
 const a = userDetails.user
@@ -47,13 +47,6 @@ async function checkboarding(a){
       <Menu />
       <div class="w-screen flex flex-col">        
      	<div id="tags" class="flex flex-row w-[100%] p-5 space-x-4">
-  <StoriesView onClick$={()=>{console.log('ok')}} poster="https://picsum.photos/100/200" name="John Doe" url="https://picsum.photos/300/400"></StoriesView>
-  <StoriesView poster="https://picsum.photos/200/300" name="Jack Steyn" url="https://picsum.photos/100/400"></StoriesView>
-  <StoriesView poster="https://picsum.photos/200/200" name="Amy Bruce" url="https://picsum.photos/200/400"></StoriesView>
-  <StoriesView poster="https://picsum.photos/200/100" name="Sino Wells" url="https://picsum.photos/300/300"></StoriesView>
-  <StoriesView poster="https://picsum.photos/300/200" name="Bret Pope" url="https://picsum.photos/200/300"></StoriesView>
-  <StoriesView poster="https://picsum.photos/400/300" name="Steve Chris" url="https://picsum.photos/100/300"></StoriesView>
- 
  
 </div><Slot /></div>
 

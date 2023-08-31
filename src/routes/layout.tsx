@@ -47,7 +47,7 @@ async function checkboarding(a){
       <Menu />
 
       <Slot />
-      <Sidebar />
+      <Sidebar name={userDetails.details["name"]} username={userDetails.details["username"]} about={userDetails.details["about"]} profilepic={userDetails.details["profile_pic"]}/>
       </main>
     </div>
   );
