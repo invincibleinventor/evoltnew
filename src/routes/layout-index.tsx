@@ -1,3 +1,5 @@
+// @ts-ignore
+
 import { component$, Slot,$, useVisibleTask$, useStore, useSignal} from '@builder.io/qwik';
 import { Header } from '../components/header/header';
 import { Menu } from '../components/menu/menu';
@@ -11,13 +13,13 @@ export default component$(async () => {
       provider: 'google'
     })
   })
- const userDetails = useStore({user:{},details:{}})
+  const userDetails = useStore({user:{},details:{}})
   useVisibleTask$(async ()=>{
     const { data, error } = await supabase.auth.getSession()
     userDetails.user = data.session?data.session.user:{}
     if(error){alert(error)}
      
-  }) 
+  })
  console.log(userDetails.user)
   
 const a = userDetails.user

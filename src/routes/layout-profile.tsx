@@ -1,3 +1,5 @@
+// @ts-ignore
+
 import { component$, Slot,$, useVisibleTask$, useStore, useSignal} from '@builder.io/qwik';
 import { Header } from '../components/header/header';
 import { Menu } from '../components/menu/menu';

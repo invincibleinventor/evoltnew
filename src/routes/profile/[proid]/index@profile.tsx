@@ -1,3 +1,5 @@
+// @ts-ignore
+
 import { Slot, component$, useStore, useVisibleTask$ } from '@builder.io/qwik';
 import { useLocation } from '@builder.io/qwik-city';
 import { supabase } from '~/services/supabase';
@@ -8,7 +10,7 @@ export default component$(async () => {
   const userDetails = useStore({user:{},details:{}})
   
  const id = useLocation().params.proid;
- const a = useStore({user:{}})
+ const a = useStore({user})
  useVisibleTask$(async ()=>{
   const { data, error } = await supabase.auth.getSession()
   userDetails.user = data.session?data.session.user:{}
