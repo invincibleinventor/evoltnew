@@ -74,6 +74,7 @@ export const Sidebar = component$((props:mycmpprops) => {
             </button>
             <button
             class="py-2 px-5 bg-white bg-opacity-[2%]  rounded-md"
+            onClick$={()=>window.location.replace('/profile/'+props.username)}
           >
             <span
               class="iconify text-neutral-300 w-4 h-4"
