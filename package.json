@@ -2,17 +2,14 @@
   "name": "qwik-app",
   "description": "File based routing and MDX support Vite.js tooling. Express.js server. Prettier code formatter. Tailwind CSS framework.",
   "scripts": {
-    "build": "npm run build.client && npm run build.ssr && npm run build.netlify",
-    "build.cf": "vite build --ssr src/entry.cloudfare.tsx",
+    "build": "qwik build",
     "build.client": "vite build",
-    "build.netlify": "vite build --ssr src/entry.netlify-edge.tsx",
-    "build.server": "vite build -c adapters/netlify-edge/vite.config.ts",
-    "build.ssr": "vite build --ssr",
-    "deploy": "netlify deploy --build",
-    "dev": "npm run dev.ssr",
-    "dev.client": "vite",
-    "dev.debug": "node --inspect-brk node_modules/vite/bin/vite.js --force --mode ssr",
-    "dev.ssr": "node --inspect node_modules/vite/bin/vite.js --mode ssr",
+    "build.preview": "vite build --ssr src/entry.preview.tsx",
+    "build.server": "vite build -c adapters/vercel-edge/vite.config.ts",
+    "build.types": "tsc --incremental --noEmit",
+    "deploy": "vercel deploy",
+    "dev": "vite --mode ssr",
+    "dev.debug": "node --inspect-brk ./node_modules/vite/bin/vite.js --mode ssr --force",
     "fmt": "prettier --write .",
     "fmt.check": "prettier --check .",
     "lint": "eslint \"src/**/*.ts*\"",
@@ -20,7 +17,7 @@
     "serve": "node server/entry.express",
     "servessr": "node server/entry.ssr",
     "start": "npm run dev",
-    "typecheck": "tsc --incremental --noEmit"
+    "qwik": "qwik"
   },
   "devDependencies": {
     "@builder.io/qwik": "1.2.10",
