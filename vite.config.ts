@@ -6,6 +6,21 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(() => {
   return {
+    resolve: {
+      alias: {
+        assert: "assert",
+        buffer: "buffer",
+        events: "events",
+        http: "stream-http",
+        https: "https-browserify",
+        punycode: "punycode",
+        stream: "stream-browserify",
+        url: "url",
+        util: "util",
+        zlib: "browserify-zlib",
+      },
+    },
+    
     plugins: [qwikCity(), qwikVite(), qwikReact(), tsconfigPaths(),],
     preview: {
       headers: {
