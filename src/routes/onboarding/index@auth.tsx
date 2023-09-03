@@ -49,7 +49,17 @@ userDetails.boarded = await checkboarding()
     const about = form.about.value;
     const username = form.username.value;
     const {data,error} = await supabase.from('users').upsert({name:name,about:about,dob:dob,username:username})
-
+async function update(){
+  const {data,error} = await supabase.from('followers').upsert({username:username,followers:{}})
+  if(data){
+  alert(data)
+  console.log(data)
+  }
+  else{
+    alert(error)
+  }
+}
+await update()
     console.log(data)
     if(error){
       console.log(error)
