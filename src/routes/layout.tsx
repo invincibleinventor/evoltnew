@@ -7,6 +7,7 @@ import { supabase , setSupabaseCookie} from '~/services/supabase';
 import {useVisibleTask$, useTask$,$ } from '@builder.io/qwik';
 import { RequestHandler, routeLoader$ } from '@builder.io/qwik-city';
 import { userDetailsContext } from '~/root';
+import Sidebar from '~/components/sidebar/sidebar';
 export const onGet: RequestHandler = async ({ cacheControl }) => {
   // Control caching for this request for best performance and to reduce hosting costs:
   // https://qwik.builder.io/docs/caching/
@@ -36,14 +37,14 @@ export const useIsLoggedIn = routeLoader$(async (requestEv) => {
 
 export default component$(() => {
   const signIn = $(async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const {  error } = await supabase.auth.signInWithOAuth({
       provider: 'google'
     })
     if(error){
-      alert(error)
+      alert(error.message)
     }
     else{
-      console.log(data)
+     // console.log(data)
 
     }
   })
@@ -52,34 +53,34 @@ export default component$(() => {
   const userDetails = useContext(userDetailsContext)
   const boarded = useStore({boarded:false,user:{}})
 
-  console.log(useIsLoggedIn())
+  //console.log(useIsLoggedIn())
   useTask$(async() => {
     userDetails.isLoggedIn = isLoggedIn.value.isLoggedIn
     userDetails.session = isLoggedIn.value.session 
     boarded.user = isLoggedIn.value.user
   })
 
-  console.log(boarded.user["user"])
+ // console.log(boarded.user["user"])
     useVisibleTask$(async()=>{
       if(userDetails.isLoggedIn){
     
-  console.log(boarded.user["user"]["id"])
+  //console.log(boarded.user["user"]["id"])
     const {data,error} =await supabase.from('users').select('*').eq('id',boarded.user["user"]["id"])
     if(data && data.length>0){
-   console.log(data)
+ //  console.log(data)
       boarded.boarded=true
     }
     else{
-     // alert(error)
+      error?alert(error.message):console.log("");
    
         window.location.replace('/onboarding')
       
-      console.log(error)
+      //console.log(error)
     }
  
 }})
-  console.log(boarded.user)
-  console.log(boarded.boarded)
+ // console.log(boarded.user)
+  //console.log(boarded.boarded)
 
   useVisibleTask$(() => setSupabaseCookie())
 
@@ -92,8 +93,8 @@ export default component$(() => {
     <div class="bgcol mb-6">
       <main class="flex flex-row w-screen flex-grow overflow-hidden ">
       
- 
-
+ <Sidebar id={boarded.user["user"]["id"]}></Sidebar>
+    
       <Slot />
       </main>
     </div>

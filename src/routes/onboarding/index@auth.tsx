@@ -1,7 +1,7 @@
 /* eslint-disable qwik/use-method-usage */
 // @ts-ignore
 
-import { component$, $,useContext, useStore } from '@builder.io/qwik';
+import { component$, $,useContext } from '@builder.io/qwik';
 
 import { supabase , setSupabaseCookie} from '~/services/supabase';
 import {useVisibleTask$, useTask$ } from '@builder.io/qwik';
@@ -41,8 +41,8 @@ export default component$(() => {
   })
   useVisibleTask$(async()=>{
      
-    const {data,error} = await supabase.from('users').select('*').eq('id', isLoggedIn.value.user["user"]["id"])
-    if(data){
+    const {data,error} = await supabase.from('users').select('*').eq('id', isLoggedIn?.value?.user?["user"]["id"]:[])
+    if(data && data.length>0){
       console.log(data)
     
       window.location.replace('/')}
@@ -62,17 +62,7 @@ export default component$(() => {
     const about = form.about.value;
     const username = form.username.value;
     const {data,error} = await supabase.from('users').upsert({name:name,about:about,dob:dob,username:username,following:[]})
-async function update(){
-  const {data,error} = await supabase.from('followers').upsert({username:username,followers:{}})
-  if(data){
-  alert(data)
-  console.log(data)
-  }
-  else{
-    alert(error)
-  }
-}
-await update()
+
     console.log(data)
     if(error){
       console.log(error)
@@ -92,7 +82,7 @@ await update()
     
     
 </div>
-        <form  class=" w-auto px-4 lg:px-0 mx-auto" preventdefault:submit onSubmit$={(e)=>handleSubmit$(e)}>
+        <form  class=" w-auto px-4 lg:px-0 mx-auto" preventdefault:submit onSubmit$={(e:any)=>handleSubmit$(e)}>
                     <div class="pb-1 pt-4">
                     <span class="mb-2 text-neutral-300 text-sm ml-1">Your Name</span>
 
