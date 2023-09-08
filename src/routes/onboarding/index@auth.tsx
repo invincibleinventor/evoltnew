@@ -1,45 +1,58 @@
-import { component$ ,useStore, useVisibleTask$, $} from '@builder.io/qwik';
-import { DocumentHead } from '@builder.io/qwik-city';
-import { supabase } from '~/services/supabase';
-export default component$(async () => {
+/* eslint-disable qwik/use-method-usage */
+// @ts-ignore
+
+import { component$, $,useContext, useStore } from '@builder.io/qwik';
+
+import { supabase , setSupabaseCookie} from '~/services/supabase';
+import {useVisibleTask$, useTask$ } from '@builder.io/qwik';
+import { DocumentHead, RequestHandler, routeLoader$ } from '@builder.io/qwik-city';
+import { userDetailsContext } from '~/root';
+export const onGet: RequestHandler = async ({ cacheControl }) => {
  
-  const signIn = $(async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google'
-    })
+  cacheControl({
+    staleWhileRevalidate: 60 * 60 * 24 * 7,
+    maxAge: 5,
+  });
+};
+
+export const useIsLoggedIn = routeLoader$(async (requestEv) => {
+  const { cookie } = requestEv
+  const refreshToken = cookie.get('my-refresh-token')?.value ?? ""
+  const accessToken = cookie.get('my-access-token')?.value ?? ""
+  
+  const { data } = await supabase.auth.getUser(accessToken)
+  await supabase.auth.setSession({
+    refresh_token: refreshToken,
+    access_token: accessToken,
   })
-  const userDetails = useStore({user:{},boarded:false})
-  const state = useStore({image:''})
-  useVisibleTask$(async ()=>{
-    const { data, error } = await supabase.auth.getSession()
-    userDetails.user = data.session?data.session.user:{}
+  const { data: sessionData } = await supabase.auth.getSession()
+  return { isLoggedIn: data.user != null, session: sessionData.session , user: data}
+})
+
+
+export default component$(() => {
+  const isLoggedIn = useIsLoggedIn()
+  const userDetails = useContext(userDetailsContext)
+
+  useTask$(async() => {
+    userDetails.isLoggedIn = isLoggedIn.value.isLoggedIn
+    userDetails.session = isLoggedIn.value.session
    
-    if(error){alert(error)}
-    const a = userDetails.user
-async function checkboarding(){
-  const {data,error} = await supabase.from('users').select('*').eq('id',a.id)
-  if(data && data.length>0){
-    window.location.replace('/')
-    console.log(data)
-    return true
-  }
-  else {
-    console.log('nodata')
-    console.log(error)
-
-    return false
-  }
-
-}
-
-userDetails.boarded = await checkboarding()
-
-     
   })
-  console.log('belo')
- console.log(userDetails.user)
-  const a = userDetails.user
-  let b = userDetails.boarded
+  useVisibleTask$(async()=>{
+     
+    const {data,error} = await supabase.from('users').select('*').eq('id', isLoggedIn.value.user["user"]["id"])
+    if(data){
+      console.log(data)
+    
+      window.location.replace('/')}
+    
+    else{
+      console.log(error)
+    }
+  })
+
+  useVisibleTask$(() => setSupabaseCookie())
 
   const handleSubmit$ = $( async (event: Event) => {
     event.preventDefault();
@@ -48,7 +61,7 @@ userDetails.boarded = await checkboarding()
     const dob=form.dob.value;
     const about = form.about.value;
     const username = form.username.value;
-    const {data,error} = await supabase.from('users').upsert({name:name,about:about,dob:dob,username:username})
+    const {data,error} = await supabase.from('users').upsert({name:name,about:about,dob:dob,username:username,following:[]})
 async function update(){
   const {data,error} = await supabase.from('followers').upsert({username:username,followers:{}})
   if(data){
@@ -66,13 +79,12 @@ await update()
       alert(error.code)
     }
     else{
-      window.location.reload()
+      window.location.replace('/')
     }
   })
-//console.log("a"+c)
- if(Object.keys(a).length>0){console.log('yes');console.log(JSON.stringify(a));if(b!=false){window.location.replace('/')}b=true}else{console.log('no');b=false}
- if(b){
-  return (<>
+  if(userDetails.isLoggedIn){
+    
+  return (
   <div class="bgcol flex flex-col content-center items-center">
       <div class="px-10 md:px-20 py-14 bg-neutral-800 rounded-2xl bg-opacity-20 my-auto">
         <h1 class="font-semibold font-inter text-2xl text-white text-center mb-2">Welcome To Evolt!</h1>
@@ -80,7 +92,7 @@ await update()
     
     
 </div>
-        <form  class=" w-auto px-4 lg:px-0 mx-auto" preventdefault:submit onSubmit$={handleSubmit$}>
+        <form  class=" w-auto px-4 lg:px-0 mx-auto" preventdefault:submit onSubmit$={(e)=>handleSubmit$(e)}>
                     <div class="pb-1 pt-4">
                     <span class="mb-2 text-neutral-300 text-sm ml-1">Your Name</span>
 
@@ -103,8 +115,17 @@ await update()
 
                     </form>
 </div>
-    </div>
-    </>)}})
+    </div>)}
+    
+    else{
+     useVisibleTask$(()=>{
+      window.location.replace('/')
+     })
+      return(
+        <></>
+      )
+    }
+  })
 
 
 export const head: DocumentHead = {
