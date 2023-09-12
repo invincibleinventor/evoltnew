@@ -102,7 +102,7 @@ if(data && data.length>0){
   value={boxDetails}
   onPending={() => <div>Loading...</div>}
   onRejected={(reason) => <div>Error: {reason}</div>}
-  onResolved={(data:any) => <div>{data}</div>}
+  onResolved={(data:any) => <div class="mx-auto">{data}</div>}
 />
        
 </div>
