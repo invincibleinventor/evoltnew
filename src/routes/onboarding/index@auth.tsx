@@ -61,7 +61,7 @@ export default component$(() => {
     const dob=form.dob.value;
     const about = form.about.value;
     const username = form.username.value;
-    const {data,error} = await supabase.from('users').upsert({name:name,about:about,dob:dob,username:username,following:[]})
+    const {data,error} = await supabase.from('users').upsert({name:name,about:about,dob:dob,username:username})
 
     console.log(data)
     if(error){
