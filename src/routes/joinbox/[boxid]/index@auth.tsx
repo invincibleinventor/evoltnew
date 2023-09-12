@@ -74,6 +74,7 @@ if(data && data.length>0){
   console.log(data[0]["privbox"])
   console.log(boarded.username)
  const {data:username} = await supabase.from('users').select('username').eq('id',boarded.user)
+ console.log(username)
 
   if(data[0]["privbox"]==false || (data[0]["privbox"]==true && data[0]["allowed"].includes(username))){
     return (
