@@ -42,10 +42,14 @@ export default component$(()=>{
           if(data){
             members = data[0]["members"]
             if(members.includes(username)==false)
+            {
+              console.log(username,members)
             members.push(username)
+            console.log(members)
+            }
             else{
              
-              window.location.href="/box/"+id
+              //window.location.href="/box/"+id
             
             }
           }
