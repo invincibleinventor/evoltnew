@@ -32,6 +32,7 @@ export default component$(()=>{
    
       const joinBox = $(async(id:any,username:any)=>{
         let members:any = []
+        let box:any=[]
         const {data,error} = await supabase.from('msgbox').select('*').eq('id',id)
         if(error){
 
@@ -45,7 +46,21 @@ export default component$(()=>{
               console.log(username,members)
             members.push(username)
             console.log(members)
+            console.log(boarded.user["user"]["id"])
+            
+            const {data,error}=await supabase.from('users').select('boxes').eq('id',boarded.user["user"]["id"])
+              if(data){
+                box=data[0].boxes
+                box.push(id)
+                console.log(box)
+              }
+
             const {error:e} = await supabase.from('msgbox').upsert({"id":id,"members":members})
+            const {error:es} = await supabase.from('users').upsert({"username":username,id:boarded.user["user"]["id"],"boxes":box})
+            if(es){
+              alert(es.message)
+              console.log(es.message)
+            }
          
           
            
@@ -76,7 +91,7 @@ if(data && data.length>0){
   
  const {data:username} = await supabase.from('users').select('username').eq('id',boarded.user["user"]["id"])
 
-  if(data[0]["privbox"]==false || (data[0]["privbox"]==true && data[0]["allowed"].includes(username))){
+  if(username && username.length>0 && data[0]["privbox"]==false || (data[0]["privbox"]==true && data[0]["allowed"].includes(username[0]["username"]))){
     return (
       <div class="flex flex-col mx-auto text-neutral-300 items-center content-center w-full h-full">
    <img class="w-16 h-16 rounded-full border border=neutral-600 my-6" src={data[0]["boxpic"]}></img>
