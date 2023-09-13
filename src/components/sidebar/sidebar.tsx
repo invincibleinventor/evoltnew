@@ -1,4 +1,5 @@
 import { component$, useSignal, useResource$, Resource } from "@builder.io/qwik";
+import { Link } from "@builder.io/qwik-city";
 import { supabase } from "~/services/supabase";
 interface myProps{
     id:any
@@ -38,13 +39,14 @@ export default component$((props:myProps)=>{
 console.log(list.value)
 
     return(
-        <div class="h-full flex flex-grow w-max py-4 px-4 flex-col space-y-4 bg-black text-neutral-300 bg-opacity-10">
+        <div class="h-full flex  py-4 w-max flex-col items-center content-center space-y-4 bg-black text-neutral-300 bg-opacity-30">
         <Resource  value={data}
   onPending={() => <div></div>}
   onRejected={(reason) => <div>Error: {reason}</div>}
-  onResolved={(data) => <div>
+  onResolved={(data) => <div class="mx-6 flex flex-col space-y-4 lg:space-y-6">
     {data?.map((data:any) => (
-      <p>{data.id}</p>
+                      <Link href={"/box/"+data["id"]} class={`lg:w-12 w-10 h-10 lg:h-12 border border-neutral-800 rounded-full `} style={`background-image: url('${data["boxpic"]}');`}></Link>
+
     ))}
   </div>}></Resource>
         </div>
