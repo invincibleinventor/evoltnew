@@ -121,7 +121,7 @@ if(data && data.length>0){
       <Resource
   value={boxDetails}
   onPending={() => <div>Loading...</div>}
-  onRejected={(reason) => <div>Error: {reason}</div>}
+  onRejected={(reason) => <div class="content-center items-center flex flex-col text-neutral-300 text-center">Error: <h1>{""+reason}</h1></div>}
   onResolved={(data:any) => <div class="mx-auto">{data}</div>}
 />
        

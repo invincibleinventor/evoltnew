@@ -1,4 +1,4 @@
-import { $, component$, useResource$, useStore, useTask$ } from '@builder.io/qwik';
+import { $, component$, useResource$, useStore, useTask$, useVisibleTask$ } from '@builder.io/qwik';
 import { DocumentHead, routeLoader$, useLocation } from '@builder.io/qwik-city';
 import { Resource } from '@builder.io/qwik';
 import { supabase } from '~/services/supabase';
@@ -18,8 +18,10 @@ export const useIsLoggedIn = routeLoader$(async (requestEv) => {
     return { isLoggedIn: data.user != null, session: sessionData.session , user: data}
   })
 export default component$(()=>{
+ 
+           
     const loc = useLocation()
-const msgtrack = useStore({track:0})
+const msgtrack = useStore({track:[]})
     const boxid=loc.params.boxid
     const box = useStore({boxid:boxid})
 
@@ -34,6 +36,7 @@ const msgtrack = useStore({track:0})
     
     }})
     const msgfetch = useResource$(async({track})=>{
+        
          const value = track(() => loc.params.boxid)
          box.boxid = value;
          track(()=>msgtrack.track)
@@ -47,16 +50,17 @@ const msgtrack = useStore({track:0})
             if(username && username.length>0 && data[0]["privbox"]==false || (data[0]["privbox"]==true && data[0]["members"].includes(username[0]["username"]))){
 
             const {data:msgdata,error:e} = await supabase.from('messages').select('*').eq('box',box.boxid)
-            if(error){
-                console.log(error)
+            if(e){
+                console.log(e)
 
             }
             else{
                 console.log('hello')
                 console.log(msgdata)
+                msgtrack.track = msgdata
             
             return(
-                msgdata
+                msgtrack.track
             )
             }}
             else{
@@ -71,16 +75,19 @@ const msgtrack = useStore({track:0})
     })
         const sendMsg = $(async()=>{
         console.log(msg.msg)
+        let a = new Date().toUTCString()
+        let b = {'id':Date.now(),"profile":boarded.profile,"sender":boarded.user["user"]["id"],msg:msg.msg,"sendername":boarded.username,box:box.boxid,receivers:{},isbox:true,time:a}
         if(msg.msg!=''){
-        const{error} = await supabase.from('messages').insert({'id':Date.now(),"profile":boarded.profile,"sender":boarded.user["user"]["id"],msg:msg.msg,"sendername":boarded.username,box:box.boxid,receivers:{},isbox:true})
+        const{error} = await supabase.from('messages').insert(b)
+        
 
 if(error){
     console.log('error'+error?.message)
 }
 else{
-    msg.msg=''
-    msgtrack.track=msgtrack.track+1
+    msgtrack.track.push(b)
     console.log(msgtrack.track)
+    msg.msg=''
 }
    }   })
 
@@ -119,19 +126,32 @@ msg.box = Number(boxid)
             }
         }
     })
+  
+     
+    useVisibleTask$(()=>{
+        supabase
+     .channel('any')
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
+         console.log('received')
+         console.log(payload.new)
+         console.log('yes')
+         msgtrack.track.push(payload.new)})
+     .subscribe()
+         })
+    
     
   return(
     <div class="relative h-screen flex flex-grow flex-col"> 
                 <div class="h-[72px] w-full bg-black px-5 py-5 bg-opacity-20 flex flex-row items-center">
    <Resource  value={data}
     onPending={() => <div></div>}
-    onRejected={(reason) => <div>Error: {reason}</div>}
+    onRejected={(reason) => <div class="content-center items-center flex flex-col text-neutral-300 text-center">Error: <h1>{""+reason}</h1></div>}
     onResolved={(data) => data}></Resource>
     </div>
     <Resource  value={msgfetch}
   onPending={() => <div></div>}
-  onRejected={(reason) => <div>Error: {reason}</div>}
-  onResolved={(data) => <div class="mx-6 overflow-scroll pb-24 pt-5 flex flex-col space-y-4 lg:space-y-6">
+  onRejected={(reason) => <div class="content-center items-center flex flex-col text-neutral-300 text-center">Error: <h1>{""+reason}</h1></div>}
+  onResolved={(data) => <div class="mx-6 overflow-auto pb-24 pt-5 flex flex-col space-y-4 lg:space-y-6">
     {data?.map((data:any) => (
         <>
 	<div class="flex w-full mt-2 space-x-3 max-w-xs">
@@ -140,7 +160,7 @@ msg.box = Number(boxid)
         <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
             <p class="text-sm">{data.msg}</p>
         </div>
-        <span class="text-xs text-gray-500 leading-none">{(data.time).toLocaleString('en-US', { month: 'long' ,date:'2-digit', year:'4-digit'})}</span>
+        <span class="text-xs text-gray-500 leading-none">{(data.time)}</span>
     </div> 
 </div>
 </>
