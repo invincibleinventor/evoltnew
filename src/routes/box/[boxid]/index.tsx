@@ -39,10 +39,11 @@ const msgtrack = useStore({track:[]})
         
          const value = track(() => loc.params.boxid)
          box.boxid = value;
-         track(()=>msgtrack.track)
+      //   track(()=>msgtrack.track)
 
 
         const {data,error} = await supabase.from('msgbox').select('*').eq('id',box.boxid)
+        console.log('ello')
         const {data:username} = await supabase.from('users').select('username').eq('id',boarded.user["user"]["id"])
         boarded.username = username[0].username
 
@@ -56,7 +57,7 @@ const msgtrack = useStore({track:[]})
             }
             else{
                 console.log('hello')
-                console.log(msgdata)
+               // console.log(msgdata)
                 msgtrack.track = msgdata
             
             return(
@@ -85,8 +86,8 @@ if(error){
     console.log('error'+error?.message)
 }
 else{
-    msgtrack.track.push(b)
-    console.log(msgtrack.track)
+   // msgtrack.track.push(b)
+ //   console.log(msgtrack.track)
     msg.msg=''
 }
    }   })
@@ -132,9 +133,9 @@ msg.box = Number(boxid)
         supabase
      .channel('any')
      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
-         console.log('received')
-         console.log(payload.new)
-         console.log('yes')
+       //  console.log('received')
+         //console.log(payload.new)
+         //nsole.log('yes')
          msgtrack.track.push(payload.new)})
      .subscribe()
          })
@@ -157,10 +158,10 @@ msg.box = Number(boxid)
 	<div class="flex w-full mt-2 space-x-3 max-w-xs">
     <img src={data.profile} class="flex-shrink-0 h-10 w-10 rounded-full"></img>
     <div>
-        <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
-            <p class="text-sm">{data.msg}</p>
+        <div class="bg-black bg-opacity-20 p-3 rounded-r-lg rounded-bl-lg">
+            <p class="text-neutral-100 text-sm">{data.msg}</p>
         </div>
-        <span class="text-xs text-gray-500 leading-none">{(data.time)}</span>
+        <span class="text-xs text-neutral-300 leading-none">{(data.time)}</span>
     </div> 
 </div>
 </>
