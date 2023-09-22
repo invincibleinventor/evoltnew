@@ -59,8 +59,11 @@ const msgtrack = useStore({track:[]})
                 console.log('hello')
                // console.log(msgdata)
                 msgtrack.track = msgdata
+                console.log(msgtrack.track[0].sendername)
+
             
             return(
+
                 msgtrack.track
             )
             }}
@@ -153,15 +156,21 @@ msg.box = Number(boxid)
   onPending={() => <div></div>}
   onRejected={(reason) => <div class="content-center items-center flex flex-col text-neutral-300 text-center">Error: <h1>{""+reason}</h1></div>}
   onResolved={(data) => <div class="mx-6 overflow-auto pb-24 pt-5 flex flex-col space-y-4 lg:space-y-6">
-    {data?.map((data:any) => (
+    {data?.map((d:any,index) => (
         <>
+        {index}
 	<div class="flex w-full mt-2 space-x-3 max-w-xs">
-    <img src={data.profile} class="flex-shrink-0 h-10 w-10 rounded-full"></img>
-    <div>
-        <div class="bg-black bg-opacity-20 p-3 rounded-r-lg rounded-bl-lg">
-            <p class="text-neutral-100 text-sm">{data.msg}</p>
+        {(index>0&&data[index-1]["sendername"]!=data[index]["sendername"])? 
+    <img src={d.profile} class="flex-shrink-0 h-10 w-10 rounded-full"></img>
+    :
+    <div class="flex-shrink-0 w-10 h-10"></div>
+        }
+            <div>
+
+        <div class="p-3 rounded-r-lg rounded-bl-lg">
+            <p class="text-neutral-100 text-sm">{d.msg}</p>
         </div>
-        <span class="text-xs text-neutral-300 leading-none">{(data.time)}</span>
+        <span class="text-xs text-neutral-300 leading-none">{(d.time)}</span>
     </div> 
 </div>
 </>
